@@ -5,6 +5,7 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.metadatacenter.cedar.internals.health.InternalsServerHealthCheck;
 import org.metadatacenter.cedar.internals.resources.IndexResource;
+import org.metadatacenter.cedar.internals.resources.ResourceInfoResource;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.model.ServerName;
@@ -12,7 +13,6 @@ import org.metadatacenter.server.logging.dao.ApplicationCypherLogDAO;
 import org.metadatacenter.server.logging.dao.ApplicationRequestLogDAO;
 import org.metadatacenter.server.logging.dbmodel.ApplicationCypherLog;
 import org.metadatacenter.server.logging.dbmodel.ApplicationRequestLog;
-import org.metadatacenter.server.search.elasticsearch.service.NodeIndexingService;
 import org.metadatacenter.server.search.elasticsearch.service.NodeSearchingService;
 import org.metadatacenter.server.search.util.IndexUtils;
 
@@ -51,8 +51,8 @@ public class InternalsServerApplication extends CedarMicroserviceApplication<Int
 
     IndexUtils indexUtils = new IndexUtils(cedarConfig);
     NodeSearchingService nodeSearchingService = indexUtils.getNodeSearchingService();
-    NodeIndexingService nodeIndexingService = indexUtils.getNodeIndexingService();
 
+    ResourceInfoResource.injectServices(userService, nodeSearchingService);
   }
 
   @Override
@@ -63,6 +63,9 @@ public class InternalsServerApplication extends CedarMicroserviceApplication<Int
 
     final InternalsServerHealthCheck healthCheck = new InternalsServerHealthCheck();
     environment.healthChecks().register("message", healthCheck);
+
+    final ResourceInfoResource search = new ResourceInfoResource(cedarConfig);
+    environment.jersey().register(search);
 
   }
 }
