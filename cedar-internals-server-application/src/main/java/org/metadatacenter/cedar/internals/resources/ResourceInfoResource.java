@@ -3,6 +3,7 @@ package org.metadatacenter.cedar.internals.resources;
 import com.codahale.metrics.annotation.Timed;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.UserResource;
+import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.config.CedarConfig;
@@ -93,71 +94,7 @@ public class ResourceInfoResource extends AbstractInternalsResource {
 
     CedarUser cedarUser = userService.findUser(uid);
     if (cedarUser != null) {
-      FolderServerUser folderServeUser = userSession.getUser(uid);
-      r.put("resourceType", CedarResourceType.USER);
-      r.put("cedarUser", cedarUser);
-      r.put("artifactServerUser", folderServeUser);
-
-      Map<String, Object> counts1 = new HashMap<>();
-      counts1.put("field", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.FIELD, cedarUser));
-      counts1.put("element", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.ELEMENT, cedarUser));
-      counts1.put("template", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.TEMPLATE, cedarUser));
-      counts1.put("templateInstance", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.INSTANCE, cedarUser));
-      counts1.put("folder", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.FOLDER, cedarUser));
-
-      r.put("artifactServerAccessibleCount", counts1);
-
-      List<FolderServerGroup> groupsOfMemberUser = proxies.group().findGroupsOfMemberUser(uid);
-      List<FolderServerGroup> groupsOfAdministratorUser = proxies.group().findGroupsOfAdministratorUser(uid);
-
-      List<CedarGroupExtract> memberGroups = new ArrayList<>();
-      for (FolderServerGroup g : groupsOfMemberUser) {
-        memberGroups.add(new CedarGroupExtract(g.getId(), g.getName()));
-      }
-
-      List<CedarGroupExtract> adminGroups = new ArrayList<>();
-      for (FolderServerGroup g : groupsOfAdministratorUser) {
-        adminGroups.add(new CedarGroupExtract(g.getId(), g.getName()));
-      }
-
-      r.put("groupsWithMembership", memberGroups);
-      r.put("groupsWithAdministrator", adminGroups);
-
-      Map<String, Object> counts2 = new HashMap<>();
-      counts2.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser, FilesystemResourcePermission.READ));
-      counts2.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser, FilesystemResourcePermission.READ));
-      counts2.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser, FilesystemResourcePermission.READ));
-      counts2.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser,
-          FilesystemResourcePermission.READ));
-      counts2.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser, FilesystemResourcePermission.READ));
-
-      r.put("searchIndexReadableCount", counts2);
-
-      Map<String, Object> counts3 = new HashMap<>();
-      counts3.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser, FilesystemResourcePermission.WRITE));
-      counts3.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser, FilesystemResourcePermission.WRITE));
-      counts3.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser, FilesystemResourcePermission.WRITE));
-      counts3.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser,
-          FilesystemResourcePermission.WRITE));
-      counts3.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser, FilesystemResourcePermission.WRITE));
-
-      r.put("searchIndexWriteableCount", counts3);
-
-      try {
-        KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
-
-        Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo);
-        String userUUID = linkedDataUtil.getUUID(id, CedarResourceType.USER);
-        UserResource userResource = kc.realm(kcInfo.getKeycloakRealmName()).users().get(userUUID);
-        UserRepresentation userRepresentation = userResource.toRepresentation();
-
-        r.put("keycloakUser", userRepresentation);
-      } catch (Exception e) {
-        log.error("Error while reading user from Keycloak", e);
-        r.put("keycloakUser", null);
-      }
-
-      // TODO: return user info
+      readUserInfo(r, uid, cedarUser, proxies, userSession);
     } else {
       GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
       FolderServerGroup group = groupSession.findGroupById(gid);
@@ -189,6 +126,86 @@ public class ResourceInfoResource extends AbstractInternalsResource {
     }
 
     return Response.ok().entity(r).build();
+  }
+
+  private void readUserInfo(Map<String, Object> r, CedarUserId uid, CedarUser cedarUser, Neo4JProxies proxies, UserServiceSession userSession) {
+    r.put("resourceType", CedarResourceType.USER);
+    r.put("cedarUser", cedarUser);
+
+    Map<String, Object> neo4j = new HashMap<>();
+    r.put("neo4j", neo4j);
+
+    FolderServerUser folderServeUser = userSession.getUser(uid);
+    neo4j.put("user", folderServeUser);
+
+    Map<String, Object> counts1 = new HashMap<>();
+    counts1.put("field", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.FIELD, cedarUser));
+    counts1.put("element", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.ELEMENT, cedarUser));
+    counts1.put("template", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.TEMPLATE, cedarUser));
+    counts1.put("templateInstance", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.INSTANCE, cedarUser));
+    counts1.put("folder", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.FOLDER, cedarUser));
+
+    neo4j.put("accessibleCount", counts1);
+
+    List<FolderServerGroup> groupsOfMemberUser = proxies.group().findGroupsOfMemberUser(uid);
+    List<FolderServerGroup> groupsOfAdministratorUser = proxies.group().findGroupsOfAdministratorUser(uid);
+
+    List<CedarGroupExtract> memberGroups = new ArrayList<>();
+    for (FolderServerGroup g : groupsOfMemberUser) {
+      memberGroups.add(new CedarGroupExtract(g.getId(), g.getName()));
+    }
+
+    List<CedarGroupExtract> adminGroups = new ArrayList<>();
+    for (FolderServerGroup g : groupsOfAdministratorUser) {
+      adminGroups.add(new CedarGroupExtract(g.getId(), g.getName()));
+    }
+
+    neo4j.put("groupsWithMembership", memberGroups);
+    neo4j.put("groupsWithAdministrator", adminGroups);
+
+    Map<String, Object> elasticsearch = new HashMap<>();
+    r.put("elasticsearch", elasticsearch);
+
+    Map<String, Object> counts2 = new HashMap<>();
+    counts2.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser, FilesystemResourcePermission.READ));
+    counts2.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser, FilesystemResourcePermission.READ));
+    counts2.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser, FilesystemResourcePermission.READ));
+    counts2.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser, FilesystemResourcePermission.READ));
+    counts2.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser, FilesystemResourcePermission.READ));
+
+    elasticsearch.put("readableCount", counts2);
+
+    Map<String, Object> counts3 = new HashMap<>();
+    counts3.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser, FilesystemResourcePermission.WRITE));
+    counts3.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser, FilesystemResourcePermission.WRITE));
+    counts3.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser, FilesystemResourcePermission.WRITE));
+    counts3.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser, FilesystemResourcePermission.WRITE));
+    counts3.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser, FilesystemResourcePermission.WRITE));
+
+    elasticsearch.put("writeableCount", counts3);
+
+
+    Map<String, Object> keycloak = new HashMap<>();
+    r.put("keycloak", keycloak);
+
+    try {
+      KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
+
+      Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo);
+      String userUUID = linkedDataUtil.getUUID(uid.getId(), CedarResourceType.USER);
+      UserResource userResource = kc.realm(kcInfo.getKeycloakRealmName()).users().get(userUUID);
+      UserRepresentation userRepresentation = userResource.toRepresentation();
+      List<RoleRepresentation> roleRepresentations = userResource.roles().realmLevel().listEffective();
+      List<String> realmRoles = new ArrayList<>();
+      for (RoleRepresentation rr : roleRepresentations) {
+        realmRoles.add(rr.getName());
+      }
+      userRepresentation.setRealmRoles(realmRoles);
+      keycloak.put("user", userRepresentation);
+    } catch (Exception e) {
+      log.error("Error while reading user from Keycloak", e);
+      keycloak.put("user", null);
+    }
   }
 
   private long getAccessibleSearchIndexDocumentCount(CedarResourceType resourceType, CedarUser cedarUser, FilesystemResourcePermission permission) {

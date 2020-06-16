@@ -50,6 +50,9 @@ public class CedarConfigInternalsTest {
     env.put(CedarEnvironmentVariable.CEDAR_INTERNALS_ADMIN_PORT.getName(), "9114");
     env.put(CedarEnvironmentVariable.CEDAR_INTERNALS_STOP_PORT.getName(), "9214");
 
+    env.put(CedarEnvironmentVariable.CEDAR_ADMIN_USER_PASSWORD.getName(), "adminPassword");
+    env.put(CedarEnvironmentVariable.CEDAR_ADMIN_USER_API_KEY.getName(), "1234");
+
     TestUtil.setEnv(env);
   }
 
