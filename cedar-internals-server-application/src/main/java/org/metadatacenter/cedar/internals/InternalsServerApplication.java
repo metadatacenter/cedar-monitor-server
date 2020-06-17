@@ -40,7 +40,6 @@ public class InternalsServerApplication extends CedarMicroserviceApplication<Int
     }
     );
     bootstrap.addBundle(hibernate);
-
   }
 
   @Override
@@ -66,6 +65,5 @@ public class InternalsServerApplication extends CedarMicroserviceApplication<Int
 
     final ResourceInfoResource search = new ResourceInfoResource(cedarConfig);
     environment.jersey().register(search);
-
   }
 }
