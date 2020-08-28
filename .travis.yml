@@ -12,7 +12,7 @@ notifications:
     on_success: change
     on_failure: always
     secure: WpUxpXyekMkdKM1Mcxge0C3bbWZ+CnB75Cmqd69qbcTk1XRSumdwShsb38GXYUxN0/vvVsalMcbLrsg4j/7UMu7qRa9Ph4A2FEACfSASYpNtQaH5LxZqbIcOF2wi+KSYVgT5ezMxsOVlcmLC8LYTF6tKJfOTx1fHhRWXSQdSO4e9hmqbl96aK9g3AEVIF7yP1LYHC1eGu1S2tfIH6nDyuxOSrlK7bvDClywkIYDv1UpXkOLABFNARaJ8MiUaEDe5rWuRERCMLdOnDlkaEkQvwtmGBhbNBDP/30cYt0KPZPJeKnO7JM3/VPBz3YGp6Nuu++JnmQO5H3W7K8VwwajxcN3fO6xRnxIDc9y7vZeToGxqJ5fbS9tWTtiXg7kRGdINO1c2Gz9fYxoTsZVZkijmDE1nHe+FQlUx/xyiQFLwyFPhNT21ES5hrCvxn6vrRbKkmiaNJH5488hQ3LMu0ZN7uUFQHzk/mLmebXn/mpKN6ma3PbVrzpV8M7Z2tGfH1ACp/LveBIZAmFYYm2B0tsxsx7xrw47BhOrKCH+8w7PiLBRX+DcUAg8YZnXjSQMSTT8/R5Qfs5IbdF+IlJZWhzgcvjXYA2WrrAwYrdQ9EibUn3m5lP38LrhQur043HGTGBbZLizDbq+6CUDGA9lGZ0+NnecUh09oZmAaa5jgCJQ3mvs=
-install: "[ ${TRAVIS_PULL_REQUEST} = 'false' ] && mvn -e -DskipTests=false clean deploy --settings .m2/travis-settings.xml"
+install: "[ ${TRAVIS_PULL_REQUEST} = 'false' ] && mvn -X -DskipTests=false clean deploy --settings .m2/travis-settings.xml"
 script: "[ ${TRAVIS_PULL_REQUEST} = 'false' ] && mvn -DskipTests=true clean --settings .m2/travis-settings.xml"
 env:
   global:
