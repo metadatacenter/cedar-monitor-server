@@ -1,6 +1,6 @@
 # cedar-internals-server
 
-[![Build Status](https://travis-ci.org/metadatacenter/cedar-internals-server.svg?branch=master)](https://travis-ci.org/metadatacenter/cedar-internals-server)
+[![Build Status](https://travis-ci.com/metadatacenter/cedar-internals-server.svg?branch=master)](https://travis-ci.com/metadatacenter/cedar-internals-server)
 
 CEDAR server to inspect internal operations
 
