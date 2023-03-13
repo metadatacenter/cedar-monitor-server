@@ -4,6 +4,7 @@ import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.metadatacenter.cedar.internals.health.InternalsServerHealthCheck;
+import org.metadatacenter.cedar.internals.resources.HealthChecksResource;
 import org.metadatacenter.cedar.internals.resources.IndexResource;
 import org.metadatacenter.cedar.internals.resources.ResourceInfoResource;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication;
@@ -65,5 +66,9 @@ public class InternalsServerApplication extends CedarMicroserviceApplication<Int
 
     final ResourceInfoResource search = new ResourceInfoResource(cedarConfig);
     environment.jersey().register(search);
+
+    final HealthChecksResource healthChecksResource = new HealthChecksResource(cedarConfig);
+    environment.jersey().register(healthChecksResource);
+
   }
 }
