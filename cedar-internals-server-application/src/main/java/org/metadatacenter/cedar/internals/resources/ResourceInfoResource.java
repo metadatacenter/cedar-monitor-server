@@ -1,10 +1,6 @@
 package org.metadatacenter.cedar.internals.resources;
 
 import com.codahale.metrics.annotation.Timed;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.resource.UserResource;
-import org.keycloak.representations.idm.RoleRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.bridge.PathInfoBuilder;
 import org.metadatacenter.config.CedarConfig;
@@ -12,24 +8,19 @@ import org.metadatacenter.error.CedarErrorKey;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.id.*;
-import org.metadatacenter.model.CedarResourceType;
-import org.metadatacenter.model.folderserver.basic.*;
+import org.metadatacenter.model.folderserver.basic.FolderServerArtifact;
+import org.metadatacenter.model.folderserver.basic.FolderServerCategory;
+import org.metadatacenter.model.folderserver.basic.FolderServerFolder;
+import org.metadatacenter.model.folderserver.basic.FolderServerGroup;
 import org.metadatacenter.model.folderserver.report.FolderServerArtifactReport;
 import org.metadatacenter.rest.context.CedarRequestContext;
-import org.metadatacenter.search.IndexedDocumentDocument;
 import org.metadatacenter.server.*;
 import org.metadatacenter.server.neo4j.proxy.Neo4JProxies;
 import org.metadatacenter.server.search.elasticsearch.service.NodeSearchingService;
-import org.metadatacenter.server.security.KeycloakUtilInfo;
-import org.metadatacenter.server.security.KeycloakUtils;
 import org.metadatacenter.server.security.model.auth.CedarNodeMaterializedPermissions;
 import org.metadatacenter.server.security.model.auth.CedarNodePermissionsWithExtract;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
-import org.metadatacenter.server.security.model.permission.resource.FilesystemResourcePermission;
-import org.metadatacenter.server.security.model.user.CedarGroupExtract;
 import org.metadatacenter.server.security.model.user.CedarUser;
-import org.metadatacenter.server.security.model.user.ResourcePublicationStatusFilter;
-import org.metadatacenter.server.security.model.user.ResourceVersionFilter;
 import org.metadatacenter.server.service.UserService;
 import org.metadatacenter.util.artifact.ArtifactReportUtil;
 import org.metadatacenter.util.http.CedarResponse;
@@ -42,9 +33,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.metadatacenter.constant.CedarPathParameters.PP_ID;
@@ -100,31 +89,27 @@ public class ResourceInfoResource extends AbstractInternalsResource {
     ResourcePermissionServiceSession permissionSession = CedarDataServices.getResourcePermissionServiceSession(c);
 
     CedarUser cedarUser = userService.findUser(uid);
-    if (cedarUser != null) {
-      readUserInfo(r, uid, cedarUser, proxies, userSession);
+    FolderServerGroup group = groupSession.findGroupById(gid);
+    if (group != null) {
+      // TODO: return group info
     } else {
-      FolderServerGroup group = groupSession.findGroupById(gid);
-      if (group != null) {
-        // TODO: return group info
+      FolderServerCategory category = categorySession.getCategoryById(cid);
+      if (category != null) {
+        // TODO: return category info
       } else {
-        FolderServerCategory category = categorySession.getCategoryById(cid);
-        if (category != null) {
-          // TODO: return category info
+        FolderServerFolder folder = folderSession.findFolderById(foid);
+        if (folder != null) {
+          readFolderInfo(c, r, foid, folder, proxies, folderSession, categorySession, permissionSession);
         } else {
-          FolderServerFolder folder = folderSession.findFolderById(foid);
-          if (folder != null) {
-            readFolderInfo(c, r, foid, folder, proxies, folderSession, categorySession, permissionSession);
+          FolderServerArtifact artifact = folderSession.findArtifactById(aid);
+          if (artifact != null) {
+            readArtifactInfo(c, r, aid, artifact, proxies, folderSession, categorySession, permissionSession);
           } else {
-            FolderServerArtifact artifact = folderSession.findArtifactById(aid);
-            if (artifact != null) {
-              readArtifactInfo(c, r, aid, artifact, proxies, folderSession, categorySession, permissionSession);
-            } else {
-              return CedarResponse.notFound()
-                  .id(id)
-                  .errorKey(CedarErrorKey.RESOURCE_NOT_FOUND)
-                  .errorMessage("There was no resource found with the given id:" + id)
-                  .build();
-            }
+            return CedarResponse.notFound()
+                .id(id)
+                .errorKey(CedarErrorKey.RESOURCE_NOT_FOUND)
+                .errorMessage("There was no resource found with the given id:" + id)
+                .build();
           }
         }
       }
@@ -133,8 +118,10 @@ public class ResourceInfoResource extends AbstractInternalsResource {
     return Response.ok().entity(r).build();
   }
 
-  private void readArtifactInfo(CedarRequestContext c, Map<String, Object> r, CedarUntypedArtifactId aid, FolderServerArtifact artifact, Neo4JProxies proxies,
-                                   FolderServiceSession folderSession, CategoryServiceSession categorySession, ResourcePermissionServiceSession permissionSession) {
+  private void readArtifactInfo(CedarRequestContext c, Map<String, Object> r, CedarUntypedArtifactId aid,
+                                FolderServerArtifact artifact, Neo4JProxies proxies,
+                                FolderServiceSession folderSession, CategoryServiceSession categorySession,
+                                ResourcePermissionServiceSession permissionSession) {
     r.put("resourceType", artifact.getType());
 
     Map<String, Object> neo4j = new HashMap<>();
@@ -149,13 +136,15 @@ public class ResourceInfoResource extends AbstractInternalsResource {
     Map<String, Object> computed = new HashMap<>();
     r.put("computed", computed);
 
-    FolderServerArtifactReport resourceReport = ArtifactReportUtil.getArtifactReport(c, cedarConfig, artifact, folderSession, permissionSession,
+    FolderServerArtifactReport resourceReport = ArtifactReportUtil.getArtifactReport(c, cedarConfig, artifact,
+        folderSession, permissionSession,
         categorySession);
 
     computed.put("report", resourceReport);
 
     CedarNodePermissionsWithExtract resourcePermissions = permissionSession.getResourcePermissions(aid);
-    CedarNodeMaterializedPermissions resourceMaterializedPermission = permissionSession.getResourceMaterializedPermission(aid);
+    CedarNodeMaterializedPermissions resourceMaterializedPermission =
+        permissionSession.getResourceMaterializedPermission(aid);
 
     computed.put("permissions", resourcePermissions);
     computed.put("materializedPermissions", resourceMaterializedPermission);
@@ -172,8 +161,10 @@ public class ResourceInfoResource extends AbstractInternalsResource {
     elasticsearch.put("document", document);
   }
 
-  private void readFolderInfo(CedarRequestContext c, Map<String, Object> r, CedarFolderId foid, FolderServerFolder folder, Neo4JProxies proxies,
-                                FolderServiceSession folderSession, CategoryServiceSession categorySession, ResourcePermissionServiceSession permissionSession) {
+  private void readFolderInfo(CedarRequestContext c, Map<String, Object> r, CedarFolderId foid,
+                              FolderServerFolder folder, Neo4JProxies proxies,
+                              FolderServiceSession folderSession, CategoryServiceSession categorySession,
+                              ResourcePermissionServiceSession permissionSession) {
     r.put("resourceType", folder.getType());
 
     Map<String, Object> neo4j = new HashMap<>();
@@ -189,7 +180,8 @@ public class ResourceInfoResource extends AbstractInternalsResource {
     r.put("computed", computed);
 
     CedarNodePermissionsWithExtract resourcePermissions = permissionSession.getResourcePermissions(foid);
-    CedarNodeMaterializedPermissions resourceMaterializedPermission = permissionSession.getResourceMaterializedPermission(foid);
+    CedarNodeMaterializedPermissions resourceMaterializedPermission =
+        permissionSession.getResourceMaterializedPermission(foid);
 
     computed.put("permissions", resourcePermissions);
     computed.put("materializedPermissions", resourceMaterializedPermission);
@@ -204,103 +196,6 @@ public class ResourceInfoResource extends AbstractInternalsResource {
       log.error("Error while reading folder from elasticsearch", e);
     }
     elasticsearch.put("document", document);
-  }
-
-  private void readUserInfo(Map<String, Object> r, CedarUserId uid, CedarUser cedarUser, Neo4JProxies proxies, UserServiceSession userSession) {
-    r.put("resourceType", CedarResourceType.USER);
-    r.put("cedarUser", cedarUser);
-
-    Map<String, Object> neo4j = new HashMap<>();
-    r.put("neo4j", neo4j);
-
-    FolderServerUser folderServeUser = userSession.getUser(uid);
-    neo4j.put("user", folderServeUser);
-
-    Map<String, Object> counts1 = new HashMap<>();
-    counts1.put("field", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.FIELD, cedarUser));
-    counts1.put("element", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.ELEMENT, cedarUser));
-    counts1.put("template", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.TEMPLATE, cedarUser));
-    counts1.put("templateInstance", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.INSTANCE, cedarUser));
-    counts1.put("folder", getAccessibleSearchIndexDocumentCount(proxies, CedarResourceType.FOLDER, cedarUser));
-
-    neo4j.put("accessibleCount", counts1);
-
-    List<FolderServerGroup> groupsOfMemberUser = proxies.group().findGroupsOfMemberUser(uid);
-    List<FolderServerGroup> groupsOfAdministratorUser = proxies.group().findGroupsOfAdministratorUser(uid);
-
-    List<CedarGroupExtract> memberGroups = new ArrayList<>();
-    for (FolderServerGroup g : groupsOfMemberUser) {
-      memberGroups.add(new CedarGroupExtract(g.getId(), g.getName()));
-    }
-
-    List<CedarGroupExtract> adminGroups = new ArrayList<>();
-    for (FolderServerGroup g : groupsOfAdministratorUser) {
-      adminGroups.add(new CedarGroupExtract(g.getId(), g.getName()));
-    }
-
-    neo4j.put("groupsWithMembership", memberGroups);
-    neo4j.put("groupsWithAdministrator", adminGroups);
-
-    Map<String, Object> elasticsearch = new HashMap<>();
-    r.put("elasticsearch", elasticsearch);
-
-    Map<String, Object> counts2 = new HashMap<>();
-    counts2.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser, FilesystemResourcePermission.READ));
-    counts2.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser, FilesystemResourcePermission.READ));
-    counts2.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser, FilesystemResourcePermission.READ));
-    counts2.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser, FilesystemResourcePermission.READ));
-    counts2.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser, FilesystemResourcePermission.READ));
-
-    elasticsearch.put("readableCount", counts2);
-
-    Map<String, Object> counts3 = new HashMap<>();
-    counts3.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser, FilesystemResourcePermission.WRITE));
-    counts3.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser, FilesystemResourcePermission.WRITE));
-    counts3.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser, FilesystemResourcePermission.WRITE));
-    counts3.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser, FilesystemResourcePermission.WRITE));
-    counts3.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser, FilesystemResourcePermission.WRITE));
-
-    elasticsearch.put("writeableCount", counts3);
-
-
-    Map<String, Object> keycloak = new HashMap<>();
-    r.put("keycloak", keycloak);
-
-    try {
-      KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
-
-      Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo);
-      String userUUID = linkedDataUtil.getUUID(uid.getId(), CedarResourceType.USER);
-      UserResource userResource = kc.realm(kcInfo.getKeycloakRealmName()).users().get(userUUID);
-      UserRepresentation userRepresentation = userResource.toRepresentation();
-      List<RoleRepresentation> roleRepresentations = userResource.roles().realmLevel().listEffective();
-      List<String> realmRoles = new ArrayList<>();
-      for (RoleRepresentation rr : roleRepresentations) {
-        realmRoles.add(rr.getName());
-      }
-      userRepresentation.setRealmRoles(realmRoles);
-      keycloak.put("user", userRepresentation);
-    } catch (Exception e) {
-      log.error("Error while reading user from Keycloak", e);
-      keycloak.put("user", null);
-    }
-  }
-
-  private long getAccessibleSearchIndexDocumentCount(CedarResourceType resourceType, CedarUser cedarUser, FilesystemResourcePermission permission) {
-    List<String> resourceTypes = new ArrayList<>();
-    resourceTypes.add(resourceType.getValue());
-    try {
-      return nodeSearchingService.searchAccessibleResourceCountByUser(resourceTypes, permission, cedarUser);
-    } catch (CedarProcessingException e) {
-      log.error("Error while reading accessible document count", e);
-    }
-    return -1;
-  }
-
-  private long getAccessibleSearchIndexDocumentCount(Neo4JProxies proxies, CedarResourceType resourceType, CedarUser cedarUser) {
-    List<CedarResourceType> resourceTypes = new ArrayList<>();
-    resourceTypes.add(resourceType);
-    return proxies.resource().viewAllFilteredCount(resourceTypes, ResourceVersionFilter.ALL, ResourcePublicationStatusFilter.ALL, cedarUser);
   }
 
 }

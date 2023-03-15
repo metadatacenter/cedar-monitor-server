@@ -53,9 +53,6 @@ public class HealthChecksResource extends AbstractInternalsResource {
     }
 
     String url = serverConfig.getAdminBase() + "healthcheck";
-    System.out.println("---------------------------------------------------------");
-    System.out.println(url);
-    // parameter
     HttpResponse proxyResponse = ProxyUtil.proxyGet(url, c);
     ProxyUtil.proxyResponseHeaders(proxyResponse, response);
     HttpEntity entity = proxyResponse.getEntity();
