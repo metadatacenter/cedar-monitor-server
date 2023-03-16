@@ -51,6 +51,7 @@ public class InternalsServerApplication extends CedarMicroserviceApplication<Int
     NodeSearchingService nodeSearchingService = indexUtils.getNodeSearchingService();
 
     ResourceInfoUser.injectServices(userService, nodeSearchingService);
+    ResourceInfoTemplateField.injectServices(userService, nodeSearchingService);
     ResourceInfoResource.injectServices(userService, nodeSearchingService);
   }
 
@@ -66,8 +67,11 @@ public class InternalsServerApplication extends CedarMicroserviceApplication<Int
     final ResourceInfoUser resourceInfoUser = new ResourceInfoUser(cedarConfig);
     environment.jersey().register(resourceInfoUser);
 
-    final ResourceInfoResource search = new ResourceInfoResource(cedarConfig);
-    environment.jersey().register(search);
+    final ResourceInfoTemplateField resourceInfoTemplateField = new ResourceInfoTemplateField(cedarConfig);
+    environment.jersey().register(resourceInfoTemplateField);
+
+    final ResourceInfoResource info = new ResourceInfoResource(cedarConfig);
+    environment.jersey().register(info);
 
     final HealthChecksResource healthChecksResource = new HealthChecksResource(cedarConfig);
     environment.jersey().register(healthChecksResource);
