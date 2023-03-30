@@ -4,8 +4,7 @@ import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.metadatacenter.cedar.internals.health.InternalsServerHealthCheck;
-import org.metadatacenter.cedar.internals.resources.IndexResource;
-import org.metadatacenter.cedar.internals.resources.ResourceInfoResource;
+import org.metadatacenter.cedar.internals.resources.*;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.model.ServerName;
@@ -51,6 +50,8 @@ public class InternalsServerApplication extends CedarMicroserviceApplication<Int
     IndexUtils indexUtils = new IndexUtils(cedarConfig);
     NodeSearchingService nodeSearchingService = indexUtils.getNodeSearchingService();
 
+    ResourceInfoUser.injectServices(userService, nodeSearchingService);
+    ResourceInfoTemplateField.injectServices(userService, nodeSearchingService);
     ResourceInfoResource.injectServices(userService, nodeSearchingService);
   }
 
@@ -63,7 +64,20 @@ public class InternalsServerApplication extends CedarMicroserviceApplication<Int
     final InternalsServerHealthCheck healthCheck = new InternalsServerHealthCheck();
     environment.healthChecks().register("message", healthCheck);
 
-    final ResourceInfoResource search = new ResourceInfoResource(cedarConfig);
-    environment.jersey().register(search);
+    final ResourceInfoUser resourceInfoUser = new ResourceInfoUser(cedarConfig);
+    environment.jersey().register(resourceInfoUser);
+
+    final ResourceInfoTemplateField resourceInfoTemplateField = new ResourceInfoTemplateField(cedarConfig);
+    environment.jersey().register(resourceInfoTemplateField);
+
+    final ResourceInfoResource info = new ResourceInfoResource(cedarConfig);
+    environment.jersey().register(info);
+
+    final HealthChecksResource healthChecksResource = new HealthChecksResource(cedarConfig);
+    environment.jersey().register(healthChecksResource);
+
+    final CommandResource commandResource = new CommandResource(cedarConfig);
+    environment.jersey().register(commandResource);
+
   }
 }
