@@ -53,6 +53,8 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
     ResourceInfoUser.injectServices(userService, nodeSearchingService);
     ResourceInfoTemplateField.injectServices(userService, nodeSearchingService);
     ResourceInfoTemplateElement.injectServices(userService, nodeSearchingService);
+    ResourceInfoTemplate.injectServices(userService, nodeSearchingService);
+    ResourceInfoTemplateInstance.injectServices(userService, nodeSearchingService);
     ResourceInfoResource.injectServices(userService, nodeSearchingService);
   }
 
@@ -73,6 +75,12 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
 
     final ResourceInfoTemplateElement resourceInfoTemplateElement = new ResourceInfoTemplateElement(cedarConfig);
     environment.jersey().register(resourceInfoTemplateElement);
+
+    final ResourceInfoTemplate resourceInfoTemplate = new ResourceInfoTemplate(cedarConfig);
+    environment.jersey().register(resourceInfoTemplate);
+
+    final ResourceInfoTemplateInstance resourceInfoTemplateInstance = new ResourceInfoTemplateInstance(cedarConfig);
+    environment.jersey().register(resourceInfoTemplateInstance);
 
     final ResourceInfoResource info = new ResourceInfoResource(cedarConfig);
     environment.jersey().register(info);
