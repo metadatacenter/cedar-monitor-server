@@ -9,23 +9,23 @@
   </parent>
 
   <groupId>org.metadatacenter</groupId>
-  <artifactId>cedar-internals-server</artifactId>
+  <artifactId>cedar-monitor-server</artifactId>
   <version>2.6.24-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>CEDAR Internals Server</name>
+  <name>CEDAR Monitor Server</name>
   <description>CEDAR server to monitor internal operations</description>
 
   <scm>
-    <connection>scm:git:https://github.com/metadatacenter/cedar-internals-server.git</connection>
-    <developerConnection>scm:git:https://github.com/metadatacenter/cedar-internals-server.git</developerConnection>
-    <url>https://github.com/metadatacenter/cedar-internals-server</url>
+    <connection>scm:git:https://github.com/metadatacenter/cedar-monitor-server.git</connection>
+    <developerConnection>scm:git:https://github.com/metadatacenter/cedar-monitor-server.git</developerConnection>
+    <url>https://github.com/metadatacenter/cedar-monitor-server</url>
     <tag>HEAD</tag>
   </scm>
 
   <modules>
-    <module>cedar-internals-server-core</module>
-    <module>cedar-internals-server-application</module>
+    <module>cedar-monitor-server-core</module>
+    <module>cedar-monitor-server-application</module>
   </modules>
 
   <build>
