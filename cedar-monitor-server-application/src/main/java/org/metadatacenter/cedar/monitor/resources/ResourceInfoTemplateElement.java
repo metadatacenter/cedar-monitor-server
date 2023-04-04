@@ -114,7 +114,7 @@ public class ResourceInfoTemplateElement extends AbstractMonitorResource {
     try {
       document = nodeSearchingService.getDocumentByCedarId(aid);
     } catch (CedarProcessingException e) {
-      log.error("Error while reading artifact from elasticsearch", e);
+      log.error("Error while reading artifact from opensearch", e);
     }
     opensearch.put("document", document);
   }

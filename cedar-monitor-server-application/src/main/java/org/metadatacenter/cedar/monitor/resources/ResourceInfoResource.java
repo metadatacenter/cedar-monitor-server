@@ -149,16 +149,16 @@ public class ResourceInfoResource extends AbstractMonitorResource {
     computed.put("permissions", resourcePermissions);
     computed.put("materializedPermissions", resourceMaterializedPermission);
 
-    Map<String, Object> elasticsearch = new HashMap<>();
-    r.put("elasticsearch", elasticsearch);
+    Map<String, Object> opensearch = new HashMap<>();
+    r.put("opensearch", opensearch);
 
     Map<String, Object> document = null;
     try {
       document = nodeSearchingService.getDocumentByCedarId(aid);
     } catch (CedarProcessingException e) {
-      log.error("Error while reading artifact from elasticsearch", e);
+      log.error("Error while reading artifact from opensearch", e);
     }
-    elasticsearch.put("document", document);
+    opensearch.put("document", document);
   }
 
   private void readFolderInfo(CedarRequestContext c, Map<String, Object> r, CedarFolderId foid,
@@ -186,8 +186,8 @@ public class ResourceInfoResource extends AbstractMonitorResource {
     computed.put("permissions", resourcePermissions);
     computed.put("materializedPermissions", resourceMaterializedPermission);
 
-    Map<String, Object> elasticsearch = new HashMap<>();
-    r.put("elasticsearch", elasticsearch);
+    Map<String, Object> opensearch = new HashMap<>();
+    r.put("opensearch", opensearch);
 
     Map<String, Object> document = null;
     try {
@@ -195,7 +195,7 @@ public class ResourceInfoResource extends AbstractMonitorResource {
     } catch (CedarProcessingException e) {
       log.error("Error while reading folder from elasticsearch", e);
     }
-    elasticsearch.put("document", document);
+    opensearch.put("document", document);
   }
 
 }
