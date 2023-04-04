@@ -52,11 +52,11 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
 
     ResourceInfoUser.injectServices(userService, nodeSearchingService);
     ResourceInfoGroup.injectServices(userService, nodeSearchingService);
+    ResourceInfoFolder.injectServices(userService, nodeSearchingService);
     ResourceInfoTemplateField.injectServices(userService, nodeSearchingService);
     ResourceInfoTemplateElement.injectServices(userService, nodeSearchingService);
     ResourceInfoTemplate.injectServices(userService, nodeSearchingService);
     ResourceInfoTemplateInstance.injectServices(userService, nodeSearchingService);
-    ResourceInfoResource.injectServices(userService, nodeSearchingService);
   }
 
   @Override
@@ -74,6 +74,9 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
     final ResourceInfoGroup resourceInfoGroup = new ResourceInfoGroup(cedarConfig);
     environment.jersey().register(resourceInfoGroup);
 
+    final ResourceInfoFolder info = new ResourceInfoFolder(cedarConfig);
+    environment.jersey().register(info);
+
     final ResourceInfoTemplateField resourceInfoTemplateField = new ResourceInfoTemplateField(cedarConfig);
     environment.jersey().register(resourceInfoTemplateField);
 
@@ -85,9 +88,6 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
 
     final ResourceInfoTemplateInstance resourceInfoTemplateInstance = new ResourceInfoTemplateInstance(cedarConfig);
     environment.jersey().register(resourceInfoTemplateInstance);
-
-    final ResourceInfoResource info = new ResourceInfoResource(cedarConfig);
-    environment.jersey().register(info);
 
     final HealthChecksResource healthChecksResource = new HealthChecksResource(cedarConfig);
     environment.jersey().register(healthChecksResource);
