@@ -1,12 +1,15 @@
 package org.metadatacenter.cedar.monitor;
 
+import com.mongodb.MongoClient;
 import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.cedar.monitor.health.MonitorServerHealthCheck;
 import org.metadatacenter.cedar.monitor.resources.*;
-import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication;
+import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplicationWithMongo;
 import org.metadatacenter.config.CedarConfig;
+import org.metadatacenter.config.MongoConfig;
 import org.metadatacenter.model.ServerName;
 import org.metadatacenter.server.logging.dao.ApplicationCypherLogDAO;
 import org.metadatacenter.server.logging.dao.ApplicationRequestLogDAO;
@@ -15,7 +18,7 @@ import org.metadatacenter.server.logging.dbmodel.ApplicationRequestLog;
 import org.metadatacenter.server.search.elasticsearch.service.NodeSearchingService;
 import org.metadatacenter.server.search.util.IndexUtils;
 
-public class MonitorServerApplication extends CedarMicroserviceApplication<MonitorServerConfiguration> {
+public class MonitorServerApplication extends CedarMicroserviceApplicationWithMongo<MonitorServerConfiguration> {
 
   private HibernateBundle<MonitorServerConfiguration> hibernate;
   private ApplicationRequestLogDAO requestLogDAO;
@@ -57,6 +60,14 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
     ResourceInfoTemplateElement.injectServices(userService, nodeSearchingService);
     ResourceInfoTemplate.injectServices(userService, nodeSearchingService);
     ResourceInfoTemplateInstance.injectServices(userService, nodeSearchingService);
+
+    MongoConfig artifactServerConfig = cedarConfig.getArtifactServerConfig();
+    CedarDataServices.initializeMongoClientFactoryForDocuments(artifactServerConfig.getMongoConnection());
+
+    MongoClient mongoClientForDocuments = CedarDataServices.getMongoClientFactoryForDocuments().getClient();
+
+    initMongoServices(mongoClientForDocuments, artifactServerConfig);
+
   }
 
   @Override
@@ -91,6 +102,9 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
 
     final RedisQueueCountsResource redisQueueCounts = new RedisQueueCountsResource(cedarConfig);
     environment.jersey().register(redisQueueCounts);
+
+    final ResourceCountsResource resourceCounts = new ResourceCountsResource(cedarConfig, templateFieldService, templateElementService, templateService, templateInstanceService);
+    environment.jersey().register(resourceCounts);
 
     final HealthChecksResource healthChecksResource = new HealthChecksResource(cedarConfig);
     environment.jersey().register(healthChecksResource);
