@@ -2,6 +2,8 @@ package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.resource.RealmResource;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
@@ -14,6 +16,8 @@ import org.metadatacenter.server.UserServiceSession;
 import org.metadatacenter.server.neo4j.proxy.Neo4JProxyFilesystemResource;
 import org.metadatacenter.server.search.elasticsearch.service.NodeSearchingService;
 import org.metadatacenter.server.search.util.IndexUtils;
+import org.metadatacenter.server.security.KeycloakUtilInfo;
+import org.metadatacenter.server.security.KeycloakUtils;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 import org.metadatacenter.server.service.TemplateElementService;
 import org.metadatacenter.server.service.TemplateFieldService;
@@ -113,6 +117,14 @@ public class ResourceCountsResource extends AbstractMonitorResource {
     opensearch.put("template", nodeSearchingService.getTotalCount(CedarResourceType.TEMPLATE));
     opensearch.put("instance", nodeSearchingService.getTotalCount(CedarResourceType.INSTANCE));
     opensearch.put("folder", nodeSearchingService.getTotalCount(CedarResourceType.FOLDER));
+
+    Map<String, Object> keycloak = new HashMap<>();
+    r.put("keycloak", keycloak);
+
+    KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
+    Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo);
+    RealmResource realm = kc.realm(kcInfo.getKeycloakRealmName());
+    keycloak.put("user", realm.users().count());
 
     return Response.ok().entity(r).build();
   }
