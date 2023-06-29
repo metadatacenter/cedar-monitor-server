@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.metadatacenter</groupId>
     <artifactId>cedar-monitor-server</artifactId>
-    <version>2.6.31</version>
+    <version>2.6.32</version>
   </parent>
 
   <groupId>org.metadatacenter</groupId>
@@ -62,19 +62,8 @@
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-healthchecks</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
     </dependency>
 
     <dependency>
@@ -90,6 +79,11 @@
     <dependency>
       <groupId>io.dropwizard</groupId>
       <artifactId>dropwizard-lifecycle</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
     </dependency>
 
     <dependency>
@@ -119,21 +113,19 @@
     </dependency>
 
     <dependency>
+      <groupId>org.javassist</groupId>
+      <artifactId>javassist</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-template-operations-library</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-template-operations-library</artifactId>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
     </dependency>
 
   </dependencies>
