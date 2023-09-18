@@ -29,10 +29,7 @@ import org.metadatacenter.server.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
@@ -63,8 +60,8 @@ public class ResourceInfoUser extends AbstractMonitorResource {
 
   @GET
   @Timed
-  @Path("/users/{id}")
-  public Response getUserInfo(@PathParam(PP_ID) String id) throws CedarException {
+  @Path("/users")
+  public Response getUserInfo(@QueryParam(PP_ID) String id) throws CedarException {
 
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);
