@@ -19,10 +19,7 @@ import org.metadatacenter.server.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
@@ -52,8 +49,8 @@ public class ResourceInfoGroup extends AbstractMonitorResource {
 
   @GET
   @Timed
-  @Path("/groups/{id}")
-  public Response getGroupInfo(@PathParam(PP_ID) String id) throws CedarException {
+  @Path("/groups")
+  public Response getGroupInfo(@QueryParam(PP_ID) String id) throws CedarException {
 
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);

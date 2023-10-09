@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.metadatacenter.bridge.CedarDataServices;
+import org.metadatacenter.cedar.util.dw.CedarCedarExceptionMapper;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
+import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.model.CedarResourceType;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.CategoryServiceSession;
@@ -121,10 +123,14 @@ public class ResourceCountsResource extends AbstractMonitorResource {
     Map<String, Object> keycloak = new HashMap<>();
     r.put("keycloak", keycloak);
 
-    KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
-    Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo);
-    RealmResource realm = kc.realm(kcInfo.getKeycloakRealmName());
-    keycloak.put("user", realm.users().count());
+    try {
+      KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
+      Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo);
+      RealmResource realm = kc.realm(kcInfo.getKeycloakRealmName());
+      keycloak.put("user", realm.users().count());
+    } catch (Exception e) {
+      r.put("errorPack", new CedarProcessingException(e).getMessage());
+    }
 
     return Response.ok().entity(r).build();
   }

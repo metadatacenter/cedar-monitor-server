@@ -22,10 +22,7 @@ import org.metadatacenter.util.artifact.ArtifactReportUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.HashMap;
@@ -54,8 +51,8 @@ public class ResourceInfoTemplateElement extends AbstractMonitorResource {
 
   @GET
   @Timed
-  @Path("/template-elements/{id}")
-  public Response search(@PathParam(PP_ID) String id) throws CedarException {
+  @Path("/template-elements")
+  public Response search(@QueryParam(PP_ID) String id) throws CedarException {
 
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);
