@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.metadatacenter.bridge.CedarDataServices;
-import org.metadatacenter.cedar.util.dw.CedarCedarExceptionMapper;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.exception.CedarProcessingException;
