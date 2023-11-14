@@ -7,9 +7,7 @@ import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.id.*;
-import org.metadatacenter.model.folderserver.basic.FolderServerArtifact;
 import org.metadatacenter.model.folderserver.basic.FolderServerFolder;
-import org.metadatacenter.model.folderserver.report.FolderServerArtifactReport;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.*;
 import org.metadatacenter.server.neo4j.proxy.Neo4JProxies;
@@ -18,7 +16,6 @@ import org.metadatacenter.server.security.model.auth.CedarNodeMaterializedPermis
 import org.metadatacenter.server.security.model.auth.CedarNodePermissionsWithExtract;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 import org.metadatacenter.server.service.UserService;
-import org.metadatacenter.util.artifact.ArtifactReportUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
