@@ -1,6 +1,6 @@
 package org.metadatacenter.cedar.monitor;
 
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
 import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
