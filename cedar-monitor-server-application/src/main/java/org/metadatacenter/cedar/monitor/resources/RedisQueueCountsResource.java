@@ -53,6 +53,7 @@ public class RedisQueueCountsResource extends AbstractMonitorResource {
     r.put(NCBI_SUBMISSION_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(NCBI_SUBMISSION_QUEUE_ID)));
     r.put(APP_LOG_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(APP_LOG_QUEUE_ID)));
     r.put(VALUERECOMMENDER_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(VALUERECOMMENDER_QUEUE_ID)));
+    r.put(CLONE_INSTANCES_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(CLONE_INSTANCES_QUEUE_ID)));
     blockingQueue.llen(queueName);
     blockingQueue.close();
     pool.close();
