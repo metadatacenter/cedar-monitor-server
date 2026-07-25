@@ -6,11 +6,14 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.metadatacenter.config.environment.CedarEnvironmentSource;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Boots the real application through the Dropwizard test support harness and exercises the wiring no
@@ -18,6 +21,16 @@ import java.net.http.HttpResponse;
  * cannot see.
  */
 public class MonitorServerApplicationSmokeTest {
+
+  static {
+    // Must run before the test support boots the server, which reads the port env vars.
+    // Alternate server ports, so the test instance never collides with a running dev server.
+    Map<String, String> environment = new HashMap<>(CedarEnvironmentSource.getAll());
+    environment.put("CEDAR_MONITOR_HTTP_PORT", "19014");
+    environment.put("CEDAR_MONITOR_ADMIN_PORT", "19114");
+    environment.put("CEDAR_MONITOR_STOP_PORT", "19214");
+    CedarEnvironmentSource.setOverride(environment);
+  }
 
   private static final DropwizardTestSupport<MonitorServerConfiguration> SERVER =
       new DropwizardTestSupport<>(MonitorServerApplication.class, ResourceHelpers.resourceFilePath("test-config.yml"));
