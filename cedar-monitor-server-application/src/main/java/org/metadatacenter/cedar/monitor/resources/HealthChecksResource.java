@@ -1,8 +1,8 @@
 package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpEntity;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.ServerConfig;
 import org.metadatacenter.exception.CedarException;
@@ -53,11 +53,11 @@ public class HealthChecksResource extends AbstractMonitorResource {
     }
 
     String url = serverConfig.getAdminBase() + "healthcheck";
-    HttpResponse proxyResponse = ProxyUtil.proxyGet(url, c);
+    ClassicHttpResponse proxyResponse = ProxyUtil.proxyGet(url, c);
     ProxyUtil.proxyResponseHeaders(proxyResponse, response);
     HttpEntity entity = proxyResponse.getEntity();
-    int statusCode = proxyResponse.getStatusLine().getStatusCode();
-    String mediaType = entity.getContentType().getValue();
+    int statusCode = proxyResponse.getCode();
+    String mediaType = entity.getContentType();
     if (entity != null) {
       try {
         String content = new String(entity.getContent().readAllBytes(), StandardCharsets.UTF_8);
