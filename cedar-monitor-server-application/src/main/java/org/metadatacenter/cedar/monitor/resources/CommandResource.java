@@ -1,8 +1,8 @@
 package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.net.URLEncodedUtils;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.id.CedarFQResourceId;
@@ -13,9 +13,9 @@ import org.metadatacenter.server.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.*;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
