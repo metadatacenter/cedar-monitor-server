@@ -15,6 +15,7 @@ import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.logging.dao.query.LogQueryDAO;
+import org.metadatacenter.server.logging.query.LogBoards;
 import org.metadatacenter.server.logging.query.LogQueryColumns;
 import org.metadatacenter.server.logging.query.LogQuerySpec;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
@@ -57,7 +58,7 @@ public class LogQueryResource extends AbstractMonitorResource {
   @Consumes(MediaType.APPLICATION_JSON)
   @UnitOfWork
   public Response query(LogQuerySpec spec) throws CedarException {
-    authorize();
+    authorize(buildRequestContext());
     try {
       return Response.ok().entity(dao.query(spec)).build();
     } catch (IllegalArgumentException e) {
@@ -74,7 +75,7 @@ public class LogQueryResource extends AbstractMonitorResource {
                         @QueryParam("table") String table,
                         @QueryParam("from") String from,
                         @QueryParam("to") String to) throws CedarException {
-    authorize();
+    authorize(buildRequestContext());
     try {
       Instant toI = to == null ? Instant.now() : Instant.parse(to);
       Instant fromI = from == null ? toI.minus(DEFAULT_FACET_SPAN) : Instant.parse(from);
@@ -101,12 +102,38 @@ public class LogQueryResource extends AbstractMonitorResource {
   @Path("/coverage")
   @UnitOfWork
   public Response coverage() throws CedarException {
-    authorize();
+    authorize(buildRequestContext());
     return Response.ok().entity(dao.coverage()).build();
   }
 
-  private void authorize() throws CedarException {
-    CedarRequestContext c = buildRequestContext();
+  /**
+   * The Insight board catalog: the pre-defined questions, each one a saved query spec. Served from
+   * the backend so the UI's list cannot drift from what the engine supports — the page loads a
+   * board's spec into the same controls, which is what keeps a board editable rather than a dead end.
+   * Specs carry no from/to; the page supplies the range.
+   */
+  @GET
+  @Timed
+  @Path("/boards")
+  public Response boards() throws CedarException {
+    authorize(buildRequestContext());
+    return Response.ok().entity(LogBoards.all()).build();
+  }
+
+  /**
+   * Authorize, and record the request against the CALLING endpoint.
+   *
+   * {@code CedarMicroserviceResource.buildRequestContext()} attributes the log row to
+   * {@code Thread.currentThread().getStackTrace()[2]} — its immediate caller. Calling it from a
+   * shared private helper therefore logs every endpoint of this class as that helper (they all showed
+   * up as "LogQueryResource.authorize"), which destroys per-endpoint resolution in exactly the boards
+   * that group by handler. So the context is built in the endpoint method and passed in here.
+   * <p>
+   * The sibling resources (LogUsageResource, LogExplorerResource) still have the helper pattern and
+   * so still mis-attribute — noted as a follow-up; fixing it centrally means touching the shared
+   * capture in cedar-server-utils-dropwizard-library and rebuilding every service.
+   */
+  private void authorize(CedarRequestContext c) throws CedarException {
     c.must(c.user()).have(CedarPermission.MONITOR_READ);
   }
 
