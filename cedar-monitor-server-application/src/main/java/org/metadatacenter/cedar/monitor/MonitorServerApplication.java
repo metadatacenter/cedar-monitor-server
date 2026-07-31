@@ -15,6 +15,7 @@ import org.metadatacenter.server.logging.dao.ApplicationCypherLogDAO;
 import org.metadatacenter.server.logging.dao.ApplicationRequestLogDAO;
 import org.metadatacenter.server.logging.dao.agg.AggregationQueryDAO;
 import org.metadatacenter.server.logging.dao.agg.LogExplorerDAO;
+import org.metadatacenter.server.logging.dao.query.LogQueryDAO;
 import org.metadatacenter.server.logging.dbmodel.ApplicationCypherLog;
 import org.metadatacenter.server.logging.dbmodel.ApplicationRequestLog;
 import org.metadatacenter.server.logging.dbmodel.agg.AggCypherHourly;
@@ -32,6 +33,7 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
   private ApplicationCypherLogDAO cypherLogDAO;
   private AggregationQueryDAO aggregationQueryDAO;
   private LogExplorerDAO logExplorerDAO;
+  private LogQueryDAO logQueryDAO;
 
   public static void main(String[] args) throws Exception {
     new MonitorServerApplication().run(args);
@@ -65,6 +67,7 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     cypherLogDAO = new ApplicationCypherLogDAO(hibernate.getSessionFactory());
     aggregationQueryDAO = new AggregationQueryDAO(hibernate.getSessionFactory());
     logExplorerDAO = new LogExplorerDAO(hibernate.getSessionFactory());
+    logQueryDAO = new LogQueryDAO(hibernate.getSessionFactory());
 
     IndexUtils indexUtils = new IndexUtils(cedarConfig);
     NodeSearchingService nodeSearchingService = indexUtils.getNodeSearchingService();
@@ -136,6 +139,9 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
 
     final LogExplorerResource logExplorerResource = new LogExplorerResource(cedarConfig, logExplorerDAO);
     environment.jersey().register(logExplorerResource);
+
+    final LogQueryResource logQueryResource = new LogQueryResource(cedarConfig, logQueryDAO);
+    environment.jersey().register(logQueryResource);
 
   }
 }
