@@ -13,8 +13,15 @@ import org.metadatacenter.config.MongoConfig;
 import org.metadatacenter.model.ServerName;
 import org.metadatacenter.server.logging.dao.ApplicationCypherLogDAO;
 import org.metadatacenter.server.logging.dao.ApplicationRequestLogDAO;
+import org.metadatacenter.server.logging.dao.agg.AggregationQueryDAO;
+import org.metadatacenter.server.logging.dao.agg.LogExplorerDAO;
 import org.metadatacenter.server.logging.dbmodel.ApplicationCypherLog;
 import org.metadatacenter.server.logging.dbmodel.ApplicationRequestLog;
+import org.metadatacenter.server.logging.dbmodel.agg.AggCypherHourly;
+import org.metadatacenter.server.logging.dbmodel.agg.AggCypherQueryCatalog;
+import org.metadatacenter.server.logging.dbmodel.agg.AggRequestHourly;
+import org.metadatacenter.server.logging.dbmodel.agg.AggRequestUserHourly;
+import org.metadatacenter.server.logging.dbmodel.agg.LogAggregationState;
 import org.metadatacenter.server.search.elasticsearch.service.NodeSearchingService;
 import org.metadatacenter.server.search.util.IndexUtils;
 
@@ -23,6 +30,8 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
   private HibernateBundle<MonitorServerConfiguration> hibernate;
   private ApplicationRequestLogDAO requestLogDAO;
   private ApplicationCypherLogDAO cypherLogDAO;
+  private AggregationQueryDAO aggregationQueryDAO;
+  private LogExplorerDAO logExplorerDAO;
 
   public static void main(String[] args) throws Exception {
     new MonitorServerApplication().run(args);
@@ -39,6 +48,11 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
         cedarConfig,
         ApplicationRequestLog.class, new Class[]{
         ApplicationCypherLog.class,
+        AggRequestHourly.class,
+        AggCypherHourly.class,
+        AggRequestUserHourly.class,
+        AggCypherQueryCatalog.class,
+        LogAggregationState.class,
     }
     );
     bootstrap.addBundle(hibernate);
@@ -49,6 +63,8 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
 
     requestLogDAO = new ApplicationRequestLogDAO(hibernate.getSessionFactory());
     cypherLogDAO = new ApplicationCypherLogDAO(hibernate.getSessionFactory());
+    aggregationQueryDAO = new AggregationQueryDAO(hibernate.getSessionFactory());
+    logExplorerDAO = new LogExplorerDAO(hibernate.getSessionFactory());
 
     IndexUtils indexUtils = new IndexUtils(cedarConfig);
     NodeSearchingService nodeSearchingService = indexUtils.getNodeSearchingService();
@@ -114,6 +130,12 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
 
     final CommandResource commandResource = new CommandResource(cedarConfig);
     environment.jersey().register(commandResource);
+
+    final LogUsageResource logUsageResource = new LogUsageResource(cedarConfig, aggregationQueryDAO);
+    environment.jersey().register(logUsageResource);
+
+    final LogExplorerResource logExplorerResource = new LogExplorerResource(cedarConfig, logExplorerDAO);
+    environment.jersey().register(logExplorerResource);
 
   }
 }
