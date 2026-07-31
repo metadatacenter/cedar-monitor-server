@@ -39,7 +39,7 @@ public class LogExplorerResource extends AbstractMonitorResource {
   public Response requests(@QueryParam("q") String q,
                            @QueryParam("minDurationMs") Long minDurationMs,
                            @QueryParam("limit") Integer limit) throws CedarException {
-    authorize();
+    authorize(buildRequestContext());
     return Response.ok().entity(dao.recentRequests(q, nanos(minDurationMs), lim(limit))).build();
   }
 
@@ -50,12 +50,20 @@ public class LogExplorerResource extends AbstractMonitorResource {
   public Response cypher(@QueryParam("q") String q,
                          @QueryParam("minDurationMs") Long minDurationMs,
                          @QueryParam("limit") Integer limit) throws CedarException {
-    authorize();
+    authorize(buildRequestContext());
     return Response.ok().entity(dao.recentCypher(q, nanos(minDurationMs), lim(limit))).build();
   }
 
-  private void authorize() throws CedarException {
-    CedarRequestContext c = buildRequestContext();
+  /**
+   * Authorize, and record the request against the CALLING endpoint.
+   *
+   * {@code CedarMicroserviceResource.buildRequestContext()} attributes the log row to
+   * {@code Thread.currentThread().getStackTrace()[2]} — its immediate caller — so building the context
+   * inside a shared private helper logged every endpoint of this class under that helper's name.
+   * Every board that groups by handler lost per-endpoint resolution as a result. The context is now
+   * built in the endpoint method and passed in.
+   */
+  private void authorize(CedarRequestContext c) throws CedarException {
     c.must(c.user()).have(CedarPermission.MONITOR_READ);
   }
 

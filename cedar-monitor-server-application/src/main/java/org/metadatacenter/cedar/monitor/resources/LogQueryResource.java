@@ -133,6 +133,36 @@ public class LogQueryResource extends AbstractMonitorResource {
   }
 
   /**
+   * Per handler: total handler time vs the Cypher time underneath it. Returns the same
+   * {@code QueryResult} shape as {@code /logs/query}, so the page renders it with the same table —
+   * it needs its own endpoint only because it joins the two log tables, which the spec deliberately
+   * does not express.
+   */
+  @GET
+  @Timed
+  @Path("/db-share")
+  @UnitOfWork
+  public Response dbShare(@QueryParam("from") String from,
+                          @QueryParam("to") String to,
+                          @QueryParam("limit") Integer limit) throws CedarException {
+    authorize(buildRequestContext());
+    try {
+      Instant toI = to == null ? Instant.now() : Instant.parse(to);
+      Instant fromI = from == null ? toI.minus(Duration.ofDays(7)) : Instant.parse(from);
+      if (!fromI.isBefore(toI)) {
+        throw new IllegalArgumentException("'from' must be before 'to'.");
+      }
+      int cap = (limit == null || limit <= 0) ? 100 : Math.min(limit, 500);
+      return Response.ok().entity(dao.dbTimeShare(fromI, toI, cap)).build();
+    } catch (DateTimeParseException e) {
+      return badRequest(new IllegalArgumentException(
+          "from/to must be ISO-8601 instants: " + e.getParsedString()));
+    } catch (IllegalArgumentException e) {
+      return badRequest(e);
+    }
+  }
+
+  /**
    * The Insight board catalog: the pre-defined questions, each one a saved query spec. Served from
    * the backend so the UI's list cannot drift from what the engine supports — the page loads a
    * board's spec into the same controls, which is what keeps a board editable rather than a dead end.
