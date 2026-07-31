@@ -40,6 +40,9 @@ import java.util.Map;
 public class LogQueryResource extends AbstractMonitorResource {
 
   private static final Duration DEFAULT_FACET_SPAN = Duration.ofHours(24);
+  /** A pathological request can issue hundreds of queries — enough to see the shape, capped to stay cheap. */
+  private static final int DEFAULT_MAX_SPANS = 500;
+  private static final int MAX_SPANS = 2000;
 
   private final LogQueryDAO dao;
 
@@ -104,6 +107,29 @@ public class LogQueryResource extends AbstractMonitorResource {
   public Response coverage() throws CedarException {
     authorize(buildRequestContext());
     return Response.ok().entity(dao.coverage()).build();
+  }
+
+  /**
+   * One globalRequestId resolved into a distributed trace — every component that handled the request
+   * plus every Cypher query underneath it, on a shared timeline with a DB-time share.
+   * <p>
+   * This is the one question the generic engine cannot express: it spans both tables and computes
+   * cross-table totals. globalRequestId is deliberately non-unique in log_request (a browser request
+   * fans out across microservices), and that fan-out is the point of the view.
+   */
+  @GET
+  @Timed
+  @Path("/trace/{globalRequestId}")
+  @UnitOfWork
+  public Response trace(@PathParam("globalRequestId") String globalRequestId,
+                        @QueryParam("maxSpans") Integer maxSpans) throws CedarException {
+    authorize(buildRequestContext());
+    try {
+      int cap = (maxSpans == null || maxSpans <= 0) ? DEFAULT_MAX_SPANS : Math.min(maxSpans, MAX_SPANS);
+      return Response.ok().entity(dao.trace(globalRequestId, cap)).build();
+    } catch (IllegalArgumentException e) {
+      return badRequest(e);
+    }
   }
 
   /**
