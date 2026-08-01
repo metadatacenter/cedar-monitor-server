@@ -54,6 +54,27 @@ public class LogExplorerResource extends AbstractMonitorResource {
     return Response.ok().entity(dao.recentCypher(q, nanos(minDurationMs), lim(limit))).build();
   }
 
+  /** Retained slowest/error request instances (survive the prune). kind = SLOW | ERROR (optional). */
+  @GET
+  @Timed
+  @Path("/outliers/requests")
+  @UnitOfWork
+  public Response requestOutliers(@QueryParam("kind") String kind,
+                                  @QueryParam("limit") Integer limit) throws CedarException {
+    authorize(buildRequestContext());
+    return Response.ok().entity(dao.requestOutliers(kind, lim(limit))).build();
+  }
+
+  /** Retained slowest Cypher instances with full text + params (survive the prune). */
+  @GET
+  @Timed
+  @Path("/outliers/cypher")
+  @UnitOfWork
+  public Response cypherOutliers(@QueryParam("limit") Integer limit) throws CedarException {
+    authorize(buildRequestContext());
+    return Response.ok().entity(dao.cypherOutliers(lim(limit))).build();
+  }
+
   /**
    * Authorize, and record the request against the CALLING endpoint.
    *
