@@ -62,10 +62,10 @@ public class ResourceInfoTemplateField extends AbstractMonitorResource {
 
     CedarUntypedArtifactId aid = CedarUntypedArtifactId.build(id);
 
-    FolderServiceSession folderSession = CedarDataServices.getFolderServiceSession(c);
+    FolderServiceSession folderSession = dataServices.getFolderServiceSession(c);
 
-    CategoryServiceSession categorySession = CedarDataServices.getCategoryServiceSession(c);
-    ResourcePermissionServiceSession permissionSession = CedarDataServices.getResourcePermissionServiceSession(c);
+    CategoryServiceSession categorySession = dataServices.getCategoryServiceSession(c);
+    ResourcePermissionServiceSession permissionSession = dataServices.getResourcePermissionServiceSession(c);
 
     FolderServerArtifact artifact = folderSession.findArtifactById(aid);
     readArtifactInfo(c, r, aid, artifact,  folderSession, categorySession, permissionSession);

@@ -76,23 +76,23 @@ public class ResourceCountsResource extends AbstractMonitorResource {
     Map<String, Object> neo4j = new HashMap<>();
     r.put("neo4j", neo4j);
 
-    UserServiceSession userSession = CedarDataServices.getUserServiceSession(c);
+    UserServiceSession userSession = dataServices.getUserServiceSession(c);
     long userCount = userSession.getUserCount();
     neo4j.put("user", userCount);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
     long groupCount = groupSession.getGroupCount();
     neo4j.put("group", groupCount);
 
-    CategoryServiceSession categorySession = CedarDataServices.getCategoryServiceSession(c);
+    CategoryServiceSession categorySession = dataServices.getCategoryServiceSession(c);
     long categoryCount = categorySession.getCategoryCount();
     neo4j.put("category", categoryCount);
 
-    FolderServiceSession folderSession = CedarDataServices.getFolderServiceSession(c);
+    FolderServiceSession folderSession = dataServices.getFolderServiceSession(c);
     long folderCount = folderSession.getFolderCount();
     neo4j.put("folder", folderCount);
 
-    Neo4JProxyFilesystemResource fsNeo4JProxy = CedarDataServices.getProxies().filesystemResource();
+    Neo4JProxyFilesystemResource fsNeo4JProxy = dataServices.getProxies().filesystemResource();
     long fieldTotalCount = fsNeo4JProxy.getTotalCount(CedarResourceType.FIELD);
     neo4j.put("field", fieldTotalCount);
     long elementTotalCount = fsNeo4JProxy.getTotalCount(CedarResourceType.ELEMENT);

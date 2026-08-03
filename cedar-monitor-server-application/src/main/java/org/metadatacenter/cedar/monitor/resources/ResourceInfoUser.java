@@ -71,8 +71,8 @@ public class ResourceInfoUser extends AbstractMonitorResource {
 
     CedarUserId uid = CedarUserId.build(id);
 
-    UserServiceSession userSession = CedarDataServices.getUserServiceSession(c);
-    Neo4JProxies proxies = CedarDataServices.getProxies();
+    UserServiceSession userSession = dataServices.getUserServiceSession(c);
+    Neo4JProxies proxies = dataServices.getProxies();
 
     CedarUser cedarUser = userService.findUser(uid);
     if (cedarUser != null) {

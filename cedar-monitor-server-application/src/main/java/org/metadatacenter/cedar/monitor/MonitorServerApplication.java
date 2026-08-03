@@ -64,7 +64,7 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     MongoConfig artifactServerConfig = cedarConfig.getArtifactServerConfig();
     CedarDataServices.initializeMongoClientFactoryForDocuments(artifactServerConfig.getMongoConnection());
 
-    MongoClient mongoClientForDocuments = CedarDataServices.getMongoClientFactoryForDocuments().getClient();
+    MongoClient mongoClientForDocuments = CedarDataServices.getInstance().getMongoClientFactoryForDocuments().getClient();
 
     initMongoServices(mongoClientForDocuments, artifactServerConfig);
 
