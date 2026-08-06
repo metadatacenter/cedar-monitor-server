@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Maven tests (Java 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BMIR_NEXUS_USERNAME: ${{ secrets.BMIR_NEXUS_USERNAME }}
+      BMIR_NEXUS_PASSWORD: ${{ secrets.BMIR_NEXUS_PASSWORD }}
+      CEDAR_HOST: metadatacenter.orgx
+      CEDAR_ADMIN_USER_API_KEY: "1234"
+      CEDAR_NEO4J_HOST: 127.0.0.1
+      CEDAR_NEO4J_USER_NAME: neo4j
+      CEDAR_NEO4J_USER_PASSWORD: password
+      CEDAR_NEO4J_BOLT_PORT: "7687"
+      CEDAR_MONGO_HOST: 127.0.0.1
+      CEDAR_MONGO_PORT: "27017"
+      CEDAR_MONGO_APP_USER_NAME: cedarUser
+      CEDAR_MONGO_APP_USER_PASSWORD: password
+      CEDAR_OPENSEARCH_HOST: 127.0.0.1
+      CEDAR_OPENSEARCH_TRANSPORT_PORT: "9300"
+      CEDAR_REDIS_PERSISTENT_HOST: 127.0.0.1
+      CEDAR_REDIS_PERSISTENT_PORT: "6379"
+      CEDAR_MONITOR_HTTP_PORT: "9014"
+      CEDAR_MONITOR_ADMIN_PORT: "9114"
+      CEDAR_MONITOR_STOP_PORT: "9214"
+      CEDAR_USER_HTTP_PORT: "9005"
+      CEDAR_LOG_MYSQL_HOST: 127.0.0.1
+      CEDAR_LOG_MYSQL_PORT: "3306"
+      CEDAR_LOG_MYSQL_DB: cedar_log
+      CEDAR_LOG_MYSQL_USER: cedar_log_user
+      CEDAR_LOG_MYSQL_PASSWORD: cedar_log_password
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run Maven tests
+        run: mvn --batch-mode --no-transfer-progress test --settings .m2/travis-settings.xml
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports
+          path: "**/target/surefire-reports/**"
+          if-no-files-found: warn
