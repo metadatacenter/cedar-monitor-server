@@ -109,7 +109,7 @@ jobs:
           cache: maven
 
       - name: Run Maven tests
-        run: mvn --batch-mode --no-transfer-progress test --settings .m2/travis-settings.xml
+        run: mvn --batch-mode --no-transfer-progress --update-snapshots test --settings .m2/travis-settings.xml
 
       # The Docker image for this server fetches its jar from Nexus by GAV, so an
       # unpublished snapshot fails the image build rather than any Maven build.
