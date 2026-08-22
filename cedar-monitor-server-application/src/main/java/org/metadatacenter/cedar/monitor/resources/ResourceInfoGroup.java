@@ -60,7 +60,7 @@ public class ResourceInfoGroup extends AbstractMonitorResource {
 
     CedarGroupId gid = CedarGroupId.build(id);
 
-    GroupServiceSession groupSession = CedarDataServices.getGroupServiceSession(c);
+    GroupServiceSession groupSession = dataServices.getGroupServiceSession(c);
 
     FolderServerGroup group = groupSession.findGroupById(gid);
 

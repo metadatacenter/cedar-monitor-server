@@ -59,11 +59,11 @@ public class ResourceInfoFolder extends AbstractMonitorResource {
 
     CedarFolderId fid = CedarFolderId.build(id);
 
-    FolderServiceSession folderSession = CedarDataServices.getFolderServiceSession(c);
-    Neo4JProxies proxies = CedarDataServices.getProxies();
+    FolderServiceSession folderSession = dataServices.getFolderServiceSession(c);
+    Neo4JProxies proxies = dataServices.getProxies();
 
-    CategoryServiceSession categorySession = CedarDataServices.getCategoryServiceSession(c);
-    ResourcePermissionServiceSession permissionSession = CedarDataServices.getResourcePermissionServiceSession(c);
+    CategoryServiceSession categorySession = dataServices.getCategoryServiceSession(c);
+    ResourcePermissionServiceSession permissionSession = dataServices.getResourcePermissionServiceSession(c);
 
     FolderServerFolder folder = folderSession.findFolderById(fid);
     if (folder != null) {

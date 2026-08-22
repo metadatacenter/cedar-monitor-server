@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # A push to develop publishes, so only ever cancel superseded
+  # pull-request and manual runs.
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+jobs:
+  test:
+    name: Maven tests (Java 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: cedar_log
+          MYSQL_USER: cedar_log_user
+          MYSQL_PASSWORD: cedar_log_password
+          MYSQL_ROOT_PASSWORD: root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      BMIR_NEXUS_USERNAME: ${{ secrets.BMIR_NEXUS_USERNAME }}
+      BMIR_NEXUS_PASSWORD: ${{ secrets.BMIR_NEXUS_PASSWORD }}
+      CEDAR_HOST: metadatacenter.orgx
+      CEDAR_NET_GATEWAY: 127.0.0.1
+      CEDAR_ADMIN_USER_API_KEY: "1234"
+      CEDAR_ADMIN_USER_PASSWORD: adminPassword
+      CEDAR_NEO4J_HOST: 127.0.0.1
+      CEDAR_NEO4J_USER_NAME: neo4j
+      CEDAR_NEO4J_USER_PASSWORD: password
+      CEDAR_NEO4J_BOLT_PORT: "7687"
+      CEDAR_MONGO_HOST: 127.0.0.1
+      CEDAR_MONGO_PORT: "27017"
+      CEDAR_MONGO_APP_USER_NAME: cedarUser
+      CEDAR_MONGO_APP_USER_PASSWORD: password
+      CEDAR_OPENSEARCH_HOST: 127.0.0.1
+      CEDAR_OPENSEARCH_REST_PORT: "9200"
+      CEDAR_OPENSEARCH_TRANSPORT_PORT: "9300"
+      CEDAR_REDIS_PERSISTENT_HOST: 127.0.0.1
+      CEDAR_REDIS_PERSISTENT_PORT: "6379"
+      CEDAR_MONITOR_HTTP_PORT: "9014"
+      CEDAR_MONITOR_ADMIN_PORT: "9114"
+      CEDAR_MONITOR_STOP_PORT: "9214"
+      CEDAR_GROUP_SERVER_HOST: 127.0.0.1
+      CEDAR_GROUP_ADMIN_PORT: "9109"
+      CEDAR_MESSAGING_SERVER_HOST: 127.0.0.1
+      CEDAR_MESSAGING_ADMIN_PORT: "9112"
+      CEDAR_REPO_SERVER_HOST: 127.0.0.1
+      CEDAR_REPO_ADMIN_PORT: "9102"
+      CEDAR_RESOURCE_SERVER_HOST: 127.0.0.1
+      CEDAR_RESOURCE_ADMIN_PORT: "9107"
+      CEDAR_SCHEMA_SERVER_HOST: 127.0.0.1
+      CEDAR_SCHEMA_ADMIN_PORT: "9103"
+      CEDAR_SUBMISSION_SERVER_HOST: 127.0.0.1
+      CEDAR_SUBMISSION_ADMIN_PORT: "9110"
+      CEDAR_ARTIFACT_SERVER_HOST: 127.0.0.1
+      CEDAR_ARTIFACT_ADMIN_PORT: "9101"
+      CEDAR_TERMINOLOGY_SERVER_HOST: 127.0.0.1
+      CEDAR_TERMINOLOGY_ADMIN_PORT: "9104"
+      CEDAR_USER_SERVER_HOST: 127.0.0.1
+      CEDAR_USER_HTTP_PORT: "9005"
+      CEDAR_USER_ADMIN_PORT: "9105"
+      CEDAR_VALUERECOMMENDER_SERVER_HOST: 127.0.0.1
+      CEDAR_VALUERECOMMENDER_ADMIN_PORT: "9106"
+      CEDAR_WORKER_SERVER_HOST: 127.0.0.1
+      CEDAR_WORKER_ADMIN_PORT: "9111"
+      CEDAR_OPENVIEW_SERVER_HOST: 127.0.0.1
+      CEDAR_OPENVIEW_ADMIN_PORT: "9113"
+      CEDAR_MONITOR_SERVER_HOST: 127.0.0.1
+      CEDAR_IMPEX_SERVER_HOST: 127.0.0.1
+      CEDAR_IMPEX_ADMIN_PORT: "9108"
+      CEDAR_BRIDGE_SERVER_HOST: 127.0.0.1
+      CEDAR_BRIDGE_ADMIN_PORT: "9115"
+      CEDAR_LOG_MYSQL_HOST: 127.0.0.1
+      CEDAR_LOG_MYSQL_PORT: "3306"
+      CEDAR_LOG_MYSQL_DB: cedar_log
+      CEDAR_LOG_MYSQL_USER: cedar_log_user
+      CEDAR_LOG_MYSQL_PASSWORD: cedar_log_password
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run Maven tests
+        run: ./mvnw --batch-mode --no-transfer-progress --update-snapshots test --settings .m2/nexus-settings.xml
+
+      # The Docker image for this server fetches its jar from Nexus by GAV, so an
+      # unpublished snapshot fails the image build rather than any Maven build.
+      # Tests have already run in the step above; this packages and uploads them.
+      - name: Publish the snapshot
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+        run: ./mvnw --batch-mode --no-transfer-progress deploy -DskipTests --settings .m2/nexus-settings.xml
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports
+          path: "**/target/surefire-reports/**"
+          if-no-files-found: warn
