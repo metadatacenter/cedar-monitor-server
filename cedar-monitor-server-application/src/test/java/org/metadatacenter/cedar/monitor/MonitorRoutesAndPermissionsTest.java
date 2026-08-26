@@ -1,5 +1,6 @@
 package org.metadatacenter.cedar.monitor;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.dropwizard.testing.DropwizardTestSupport;
 import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
@@ -22,6 +23,8 @@ import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
 import org.metadatacenter.model.SystemComponent;
+import org.metadatacenter.cedar.util.dw.CedarServerInsightReportResource;
+import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.util.test.RouteSurface;
 import org.metadatacenter.util.test.TestAuthUtil;
 
@@ -30,6 +33,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -82,7 +86,8 @@ public class MonitorRoutesAndPermissionsTest {
       ResourceInfoTemplate.class,
       ResourceInfoTemplateElement.class,
       ResourceInfoTemplateField.class,
-      ResourceInfoTemplateInstance.class);
+      ResourceInfoTemplateInstance.class,
+      CedarServerInsightReportResource.class);
 
   private static String normalUserAuthHeader;
   private static String adminUserAuthHeader;
@@ -145,6 +150,26 @@ public class MonitorRoutesAndPermissionsTest {
     }
     Assertions.assertEquals(0, failures.length(),
         "Monitor endpoints did not admit an authorized admin:\n" + failures);
+  }
+
+  @Test
+  public void threadDetailsReturnsDistinctDetailsForEachThread() throws Exception {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/insight/thread-details"))
+        .header("Authorization", adminUserAuthHeader)
+        .GET()
+        .build();
+    HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    Assertions.assertEquals(200, response.statusCode());
+    JsonNode threads = JsonMapper.MAPPER.readTree(response.body());
+    Assertions.assertTrue(threads.size() > 1, "Expected details for more than one live thread");
+    HashSet<Long> threadIds = new HashSet<>();
+    threads.fields().forEachRemaining(entry -> {
+      Assertions.assertEquals(entry.getKey(), entry.getValue().get("name").asText());
+      threadIds.add(entry.getValue().get("id").asLong());
+    });
+    Assertions.assertTrue(threadIds.size() > 1, "Every thread entry reused the same detail map");
   }
 
   /** Sends the endpoint's request with an Authorization header; records transport errors. */
