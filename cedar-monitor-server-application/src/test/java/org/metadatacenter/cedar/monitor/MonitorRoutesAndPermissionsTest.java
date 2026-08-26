@@ -65,6 +65,7 @@ public class MonitorRoutesAndPermissionsTest {
     environment.put("CEDAR_MONITOR_ADMIN_PORT", "19120");
     environment.put("CEDAR_MONITOR_STOP_PORT", "19220");
     environment.put("CEDAR_REDIS_PERSISTENT_PORT", "1");
+    environment.put("CEDAR_ARTIFACT_ADMIN_PORT", "1");
     CedarEnvironmentSource.setOverride(environment);
   }
 
@@ -170,6 +171,35 @@ public class MonitorRoutesAndPermissionsTest {
       threadIds.add(entry.getValue().get("id").asLong());
     });
     Assertions.assertTrue(threadIds.size() > 1, "Every thread entry reused the same detail map");
+  }
+
+  /**
+   * An authorized health probe is an inter-service proxy request. A stopped target is a temporary
+   * dependency outage, so the monitor must answer 503 rather than leaking the proxy's transport
+   * exception through the generic 500 mapper.
+   */
+  @Test
+  public void stoppedServiceHealthCheckIsServiceUnavailable() throws Exception {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/health-check/artifact"))
+        .header("Authorization", adminUserAuthHeader)
+        .GET()
+        .build();
+
+    HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    Assertions.assertEquals(503, response.statusCode(), response.body());
+    JsonNode error = JsonMapper.MAPPER.readTree(response.body());
+    Assertions.assertEquals("SERVICE_UNAVAILABLE", error.path("status").asText(), response.body());
+    Assertions.assertEquals("Downstream service is unavailable", error.path("message").asText(), response.body());
+    Assertions.assertTrue(error.path("originalException").isMissingNode()
+            || error.path("originalException").isNull(),
+        "The response must not serialize the transport exception: " + response.body());
+    Assertions.assertTrue(error.path("sourceException").isMissingNode()
+            || error.path("sourceException").isNull(),
+        "The response must not serialize the transport stack: " + response.body());
+    Assertions.assertFalse(response.body().contains("127.0.0.1"),
+        "The client-facing outage response must not expose the downstream URL: " + response.body());
   }
 
   /** Sends the endpoint's request with an Authorization header; records transport errors. */
