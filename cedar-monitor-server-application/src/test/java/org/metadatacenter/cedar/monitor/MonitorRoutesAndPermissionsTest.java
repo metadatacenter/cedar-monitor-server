@@ -202,6 +202,31 @@ public class MonitorRoutesAndPermissionsTest {
         "The client-facing outage response must not expose the downstream URL: " + response.body());
   }
 
+  /** A direct Redis read has the same sanitized dependency-outage contract as HTTP proxies. */
+  @Test
+  public void stoppedRedisQueueCountIsServiceUnavailable() throws Exception {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/redis/queue-counts"))
+        .header("Authorization", adminUserAuthHeader)
+        .GET()
+        .build();
+
+    HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    Assertions.assertEquals(503, response.statusCode(), response.body());
+    JsonNode error = JsonMapper.MAPPER.readTree(response.body());
+    Assertions.assertEquals("SERVICE_UNAVAILABLE", error.path("status").asText(), response.body());
+    Assertions.assertEquals("Redis is unavailable", error.path("message").asText(), response.body());
+    Assertions.assertTrue(error.path("originalException").isMissingNode()
+            || error.path("originalException").isNull(),
+        "The response must not serialize the Redis exception: " + response.body());
+    Assertions.assertTrue(error.path("sourceException").isMissingNode()
+            || error.path("sourceException").isNull(),
+        "The response must not serialize the Redis stack: " + response.body());
+    Assertions.assertFalse(response.body().contains("127.0.0.1"),
+        "The client-facing outage response must not expose the Redis endpoint: " + response.body());
+  }
+
   /** Sends the endpoint's request with an Authorization header; records transport errors. */
   private int statusWithAuth(RouteSurface.Endpoint endpoint, String authHeader, StringBuilder failures) {
     try {
