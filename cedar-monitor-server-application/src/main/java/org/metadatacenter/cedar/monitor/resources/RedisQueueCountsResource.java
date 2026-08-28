@@ -45,18 +45,15 @@ public class RedisQueueCountsResource extends AbstractMonitorResource {
     Map<String, Object> r = new HashMap<>();
 
     CacheServerPersistent cacheConfig = cedarConfig.getCacheConfig().getPersistent();
-    JedisPool pool = new JedisPool(new JedisPoolConfig(), cacheConfig.getConnection().getHost(),
+    try (JedisPool pool = new JedisPool(new JedisPoolConfig(), cacheConfig.getConnection().getHost(),
         cacheConfig.getConnection().getPort(), cacheConfig.getConnection().getTimeout());
-    String queueName = "queue";
-    Jedis blockingQueue = pool.getResource();
-    r.put(SEARCH_PERMISSION_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(SEARCH_PERMISSION_QUEUE_ID)));
-    r.put(NCBI_SUBMISSION_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(NCBI_SUBMISSION_QUEUE_ID)));
-    r.put(APP_LOG_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(APP_LOG_QUEUE_ID)));
-    r.put(VALUERECOMMENDER_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(VALUERECOMMENDER_QUEUE_ID)));
-    r.put(CLONE_INSTANCES_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(CLONE_INSTANCES_QUEUE_ID)));
-    blockingQueue.llen(queueName);
-    blockingQueue.close();
-    pool.close();
+         Jedis blockingQueue = pool.getResource()) {
+      r.put(SEARCH_PERMISSION_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(SEARCH_PERMISSION_QUEUE_ID)));
+      r.put(NCBI_SUBMISSION_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(NCBI_SUBMISSION_QUEUE_ID)));
+      r.put(APP_LOG_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(APP_LOG_QUEUE_ID)));
+      r.put(VALUERECOMMENDER_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(VALUERECOMMENDER_QUEUE_ID)));
+      r.put(CLONE_INSTANCES_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(CLONE_INSTANCES_QUEUE_ID)));
+    }
 
     return Response.ok().entity(r).build();
   }

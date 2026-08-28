@@ -1,5 +1,6 @@
 package org.metadatacenter.cedar.monitor;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.dropwizard.testing.DropwizardTestSupport;
 import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
@@ -22,6 +23,8 @@ import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
 import org.metadatacenter.model.SystemComponent;
+import org.metadatacenter.cedar.util.dw.CedarServerInsightReportResource;
+import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.util.test.RouteSurface;
 import org.metadatacenter.util.test.TestAuthUtil;
 
@@ -30,6 +33,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -61,6 +65,7 @@ public class MonitorRoutesAndPermissionsTest {
     environment.put("CEDAR_MONITOR_ADMIN_PORT", "19120");
     environment.put("CEDAR_MONITOR_STOP_PORT", "19220");
     environment.put("CEDAR_REDIS_PERSISTENT_PORT", "1");
+    environment.put("CEDAR_ARTIFACT_ADMIN_PORT", "1");
     CedarEnvironmentSource.setOverride(environment);
   }
 
@@ -82,7 +87,8 @@ public class MonitorRoutesAndPermissionsTest {
       ResourceInfoTemplate.class,
       ResourceInfoTemplateElement.class,
       ResourceInfoTemplateField.class,
-      ResourceInfoTemplateInstance.class);
+      ResourceInfoTemplateInstance.class,
+      CedarServerInsightReportResource.class);
 
   private static String normalUserAuthHeader;
   private static String adminUserAuthHeader;
@@ -145,6 +151,80 @@ public class MonitorRoutesAndPermissionsTest {
     }
     Assertions.assertEquals(0, failures.length(),
         "Monitor endpoints did not admit an authorized admin:\n" + failures);
+  }
+
+  @Test
+  public void threadDetailsReturnsDistinctDetailsForEachThread() throws Exception {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/insight/thread-details"))
+        .header("Authorization", adminUserAuthHeader)
+        .GET()
+        .build();
+    HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    Assertions.assertEquals(200, response.statusCode());
+    JsonNode threads = JsonMapper.MAPPER.readTree(response.body());
+    Assertions.assertTrue(threads.size() > 1, "Expected details for more than one live thread");
+    HashSet<Long> threadIds = new HashSet<>();
+    threads.fields().forEachRemaining(entry -> {
+      Assertions.assertEquals(entry.getKey(), entry.getValue().get("name").asText());
+      threadIds.add(entry.getValue().get("id").asLong());
+    });
+    Assertions.assertTrue(threadIds.size() > 1, "Every thread entry reused the same detail map");
+  }
+
+  /**
+   * An authorized health probe is an inter-service proxy request. A stopped target is a temporary
+   * dependency outage, so the monitor must answer 503 rather than leaking the proxy's transport
+   * exception through the generic 500 mapper.
+   */
+  @Test
+  public void stoppedServiceHealthCheckIsServiceUnavailable() throws Exception {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/health-check/artifact"))
+        .header("Authorization", adminUserAuthHeader)
+        .GET()
+        .build();
+
+    HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    Assertions.assertEquals(503, response.statusCode(), response.body());
+    JsonNode error = JsonMapper.MAPPER.readTree(response.body());
+    Assertions.assertEquals("SERVICE_UNAVAILABLE", error.path("status").asText(), response.body());
+    Assertions.assertEquals("Downstream service is unavailable", error.path("message").asText(), response.body());
+    Assertions.assertTrue(error.path("originalException").isMissingNode()
+            || error.path("originalException").isNull(),
+        "The response must not serialize the transport exception: " + response.body());
+    Assertions.assertTrue(error.path("sourceException").isMissingNode()
+            || error.path("sourceException").isNull(),
+        "The response must not serialize the transport stack: " + response.body());
+    Assertions.assertFalse(response.body().contains("127.0.0.1"),
+        "The client-facing outage response must not expose the downstream URL: " + response.body());
+  }
+
+  /** A direct Redis read has the same sanitized dependency-outage contract as HTTP proxies. */
+  @Test
+  public void stoppedRedisQueueCountIsServiceUnavailable() throws Exception {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/redis/queue-counts"))
+        .header("Authorization", adminUserAuthHeader)
+        .GET()
+        .build();
+
+    HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    Assertions.assertEquals(503, response.statusCode(), response.body());
+    JsonNode error = JsonMapper.MAPPER.readTree(response.body());
+    Assertions.assertEquals("SERVICE_UNAVAILABLE", error.path("status").asText(), response.body());
+    Assertions.assertEquals("Redis is unavailable", error.path("message").asText(), response.body());
+    Assertions.assertTrue(error.path("originalException").isMissingNode()
+            || error.path("originalException").isNull(),
+        "The response must not serialize the Redis exception: " + response.body());
+    Assertions.assertTrue(error.path("sourceException").isMissingNode()
+            || error.path("sourceException").isNull(),
+        "The response must not serialize the Redis stack: " + response.body());
+    Assertions.assertFalse(response.body().contains("127.0.0.1"),
+        "The client-facing outage response must not expose the Redis endpoint: " + response.body());
   }
 
   /** Sends the endpoint's request with an Authorization header; records transport errors. */
