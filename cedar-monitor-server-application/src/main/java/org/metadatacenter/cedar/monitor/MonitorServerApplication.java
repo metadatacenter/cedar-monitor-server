@@ -54,12 +54,12 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     NodeSearchingService nodeSearchingService = indexUtils.getNodeSearchingService();
 
     ResourceInfoUser.injectServices(userService, nodeSearchingService);
-    ResourceInfoGroup.injectServices(userService, nodeSearchingService);
-    ResourceInfoFolder.injectServices(userService, nodeSearchingService);
-    ResourceInfoTemplateField.injectServices(userService, nodeSearchingService);
-    ResourceInfoTemplateElement.injectServices(userService, nodeSearchingService);
-    ResourceInfoTemplate.injectServices(userService, nodeSearchingService);
-    ResourceInfoTemplateInstance.injectServices(userService, nodeSearchingService);
+    ResourceInfoGroup.injectServices(nodeSearchingService);
+    ResourceInfoFolder.injectServices(nodeSearchingService);
+    ResourceInfoTemplateField.injectServices(nodeSearchingService);
+    ResourceInfoTemplateElement.injectServices(nodeSearchingService);
+    ResourceInfoTemplate.injectServices(nodeSearchingService);
+    ResourceInfoTemplateInstance.injectServices(nodeSearchingService);
 
     MongoConfig artifactServerConfig = cedarConfig.getArtifactServerConfig();
     CedarDataServices.initializeMongoClientFactoryForDocuments(artifactServerConfig.getMongoConnection());

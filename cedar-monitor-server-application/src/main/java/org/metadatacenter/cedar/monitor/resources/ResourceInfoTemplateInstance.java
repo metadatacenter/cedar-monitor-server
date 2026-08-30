@@ -17,7 +17,6 @@ import org.metadatacenter.server.search.elasticsearch.service.NodeSearchingServi
 import org.metadatacenter.server.security.model.auth.CedarNodeMaterializedPermissions;
 import org.metadatacenter.server.security.model.auth.CedarNodePermissionsWithExtract;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
-import org.metadatacenter.server.service.UserService;
 import org.metadatacenter.util.artifact.ArtifactReportUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,15 +36,13 @@ public class ResourceInfoTemplateInstance extends AbstractMonitorResource {
 
   private static final Logger log = LoggerFactory.getLogger(ResourceInfoTemplateInstance.class);
 
-  private static UserService userService;
   private static NodeSearchingService nodeSearchingService;
 
   public ResourceInfoTemplateInstance(CedarConfig cedarConfig) {
     super(cedarConfig);
   }
 
-  public static void injectServices(UserService userService, NodeSearchingService nodeSearchingService) {
-    ResourceInfoTemplateInstance.userService = userService;
+  public static void injectServices(NodeSearchingService nodeSearchingService) {
     ResourceInfoTemplateInstance.nodeSearchingService = nodeSearchingService;
   }
 

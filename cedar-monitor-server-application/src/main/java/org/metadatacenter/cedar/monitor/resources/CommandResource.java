@@ -7,9 +7,7 @@ import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.id.CedarFQResourceId;
 import org.metadatacenter.rest.context.CedarRequestContext;
-import org.metadatacenter.server.search.elasticsearch.service.NodeSearchingService;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
-import org.metadatacenter.server.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,16 +45,8 @@ public class CommandResource extends AbstractMonitorResource {
   public static final String QUERY_STRING = "queryString";
   public static final String QUERY_PARAMETERS = "queryParameters";
 
-  private static UserService userService;
-  private static NodeSearchingService nodeSearchingService;
-
   public CommandResource(CedarConfig cedarConfig) {
     super(cedarConfig);
-  }
-
-  public static void injectServices(UserService userService, NodeSearchingService nodeSearchingService) {
-    CommandResource.userService = userService;
-    CommandResource.nodeSearchingService = nodeSearchingService;
   }
 
   @GET

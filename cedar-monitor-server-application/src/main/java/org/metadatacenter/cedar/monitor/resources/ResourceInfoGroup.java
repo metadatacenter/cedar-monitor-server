@@ -15,7 +15,6 @@ import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarNodeMaterializedPermissions;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 import org.metadatacenter.server.security.model.permission.resource.FilesystemResourcePermission;
-import org.metadatacenter.server.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,15 +34,13 @@ public class ResourceInfoGroup extends AbstractMonitorResource {
 
   private static final Logger log = LoggerFactory.getLogger(ResourceInfoGroup.class);
 
-  private static UserService userService;
   private static NodeSearchingService nodeSearchingService;
 
   public ResourceInfoGroup(CedarConfig cedarConfig) {
     super(cedarConfig);
   }
 
-  public static void injectServices(UserService userService, NodeSearchingService nodeSearchingService) {
-    ResourceInfoGroup.userService = userService;
+  public static void injectServices(NodeSearchingService nodeSearchingService) {
     ResourceInfoGroup.nodeSearchingService = nodeSearchingService;
   }
 
