@@ -3,27 +3,15 @@ package org.metadatacenter.cedar.monitor;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.dropwizard.testing.DropwizardTestSupport;
 import io.dropwizard.testing.ResourceHelpers;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.metadatacenter.cedar.monitor.resources.CommandResource;
-import org.metadatacenter.cedar.monitor.resources.HealthChecksResource;
-import org.metadatacenter.cedar.monitor.resources.RedisQueueCountsResource;
-import org.metadatacenter.cedar.monitor.resources.ResourceCountsOpenSearchResource;
-import org.metadatacenter.cedar.monitor.resources.ResourceCountsResource;
-import org.metadatacenter.cedar.monitor.resources.ResourceInfoFolder;
-import org.metadatacenter.cedar.monitor.resources.ResourceInfoGroup;
-import org.metadatacenter.cedar.monitor.resources.ResourceInfoTemplate;
-import org.metadatacenter.cedar.monitor.resources.ResourceInfoTemplateElement;
-import org.metadatacenter.cedar.monitor.resources.ResourceInfoTemplateField;
-import org.metadatacenter.cedar.monitor.resources.ResourceInfoTemplateInstance;
-import org.metadatacenter.cedar.monitor.resources.ResourceInfoUser;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
 import org.metadatacenter.model.SystemComponent;
-import org.metadatacenter.cedar.util.dw.CedarServerInsightReportResource;
 import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.util.test.RouteSurface;
 import org.metadatacenter.util.test.TestAuthUtil;
@@ -32,6 +20,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -74,21 +63,26 @@ public class MonitorRoutesAndPermissionsTest {
 
   private static final HttpClient CLIENT = HttpClient.newHttpClient();
 
-  /** Every monitor resource class that declares endpoints (the index and abstract bases do not). */
-  private static final List<Class<?>> RESOURCE_CLASSES = List.of(
-      ResourceCountsResource.class,
-      ResourceCountsOpenSearchResource.class,
-      RedisQueueCountsResource.class,
-      HealthChecksResource.class,
-      CommandResource.class,
-      ResourceInfoFolder.class,
-      ResourceInfoGroup.class,
-      ResourceInfoUser.class,
-      ResourceInfoTemplate.class,
-      ResourceInfoTemplateElement.class,
-      ResourceInfoTemplateField.class,
-      ResourceInfoTemplateInstance.class,
-      CedarServerInsightReportResource.class);
+  /**
+   * Every monitor resource class that declares endpoints, read from what the booted application
+   * actually registered.
+   *
+   * <p>A hand-maintained list asserts what its author remembered, not what the application
+   * registers: a resource added to {@code MonitorServerApplication} and left out of the list is a
+   * route this suite silently stops probing, which is the regression the suite exists to catch.
+   * {@code IndexResource} is excluded because it is deliberately outside both gates.
+   */
+  private static List<Class<?>> resourceClasses() {
+    ResourceConfig resourceConfig = SERVER.getEnvironment().jersey().getResourceConfig();
+    List<Object> registeredComponents = new ArrayList<>();
+    registeredComponents.addAll(resourceConfig.getInstances());
+    registeredComponents.addAll(resourceConfig.getSingletons());
+    registeredComponents.addAll(resourceConfig.getClasses());
+    registeredComponents.addAll(resourceConfig.getResources());
+    return RouteSurface.registeredResourceClasses(registeredComponents, "org.metadatacenter").stream()
+        .filter(resourceClass -> !resourceClass.getSimpleName().equals("IndexResource"))
+        .toList();
+  }
 
   private static String normalUserAuthHeader;
   private static String adminUserAuthHeader;
@@ -112,14 +106,14 @@ public class MonitorRoutesAndPermissionsTest {
   public void everyRouteRejectsAnUnauthenticatedRequest() {
     RouteSurface.assertEveryRouteAnswers(
         "http://localhost:" + SERVER.getLocalPort(),
-        RouteSurface.endpoints(RESOURCE_CLASSES),
+        RouteSurface.endpoints(resourceClasses()),
         401);
   }
 
   @Test
   public void everyRouteDeniesAUserWithoutTheMonitorPermission() {
     StringBuilder failures = new StringBuilder();
-    List<RouteSurface.Endpoint> endpoints = RouteSurface.endpoints(RESOURCE_CLASSES);
+    List<RouteSurface.Endpoint> endpoints = RouteSurface.endpoints(resourceClasses());
     // Guard against a vacuous pass: these assertions live inside a loop, so an empty surface would
     // silently assert nothing.
     Assertions.assertFalse(endpoints.isEmpty(), "No monitor endpoints found by reflection");
@@ -137,7 +131,7 @@ public class MonitorRoutesAndPermissionsTest {
   @Test
   public void everyRouteAdmitsTheAdminUserPastBothGates() {
     StringBuilder failures = new StringBuilder();
-    List<RouteSurface.Endpoint> endpoints = RouteSurface.endpoints(RESOURCE_CLASSES);
+    List<RouteSurface.Endpoint> endpoints = RouteSurface.endpoints(resourceClasses());
     Assertions.assertFalse(endpoints.isEmpty(), "No monitor endpoints found by reflection");
     for (RouteSurface.Endpoint endpoint : endpoints) {
       int status = statusWithAuth(endpoint, adminUserAuthHeader, failures);
