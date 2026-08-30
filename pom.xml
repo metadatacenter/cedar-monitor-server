@@ -24,7 +24,6 @@
   </scm>
 
   <modules>
-    <module>cedar-monitor-server-core</module>
     <module>cedar-monitor-server-application</module>
   </modules>
 
