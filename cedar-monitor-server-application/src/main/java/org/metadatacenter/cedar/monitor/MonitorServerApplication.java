@@ -56,10 +56,7 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     ResourceInfoUser.injectServices(userService, nodeSearchingService);
     ResourceInfoGroup.injectServices(nodeSearchingService);
     ResourceInfoFolder.injectServices(nodeSearchingService);
-    ResourceInfoTemplateField.injectServices(nodeSearchingService);
-    ResourceInfoTemplateElement.injectServices(nodeSearchingService);
-    ResourceInfoTemplate.injectServices(nodeSearchingService);
-    ResourceInfoTemplateInstance.injectServices(nodeSearchingService);
+    ResourceInfoArtifact.injectServices(nodeSearchingService);
 
     MongoConfig artifactServerConfig = cedarConfig.getArtifactServerConfig();
     CedarDataServices.initializeMongoClientFactoryForDocuments(artifactServerConfig.getMongoConnection());
@@ -88,17 +85,9 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     final ResourceInfoFolder info = new ResourceInfoFolder(cedarConfig);
     environment.jersey().register(info);
 
-    final ResourceInfoTemplateField resourceInfoTemplateField = new ResourceInfoTemplateField(cedarConfig);
-    environment.jersey().register(resourceInfoTemplateField);
-
-    final ResourceInfoTemplateElement resourceInfoTemplateElement = new ResourceInfoTemplateElement(cedarConfig);
-    environment.jersey().register(resourceInfoTemplateElement);
-
-    final ResourceInfoTemplate resourceInfoTemplate = new ResourceInfoTemplate(cedarConfig);
-    environment.jersey().register(resourceInfoTemplate);
-
-    final ResourceInfoTemplateInstance resourceInfoTemplateInstance = new ResourceInfoTemplateInstance(cedarConfig);
-    environment.jersey().register(resourceInfoTemplateInstance);
+    // One resource serves all four artifact kinds; each keeps its own path and OpenAPI entry.
+    final ResourceInfoArtifact resourceInfoArtifact = new ResourceInfoArtifact(cedarConfig);
+    environment.jersey().register(resourceInfoArtifact);
 
     final RedisQueueCountsResource redisQueueCounts = new RedisQueueCountsResource(cedarConfig);
     environment.jersey().register(redisQueueCounts);
