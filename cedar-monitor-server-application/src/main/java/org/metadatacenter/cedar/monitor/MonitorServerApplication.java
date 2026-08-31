@@ -1,13 +1,13 @@
 package org.metadatacenter.cedar.monitor;
 
 import com.mongodb.client.MongoClient;
-import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.core.setup.Bootstrap;
 import io.dropwizard.core.setup.Environment;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.cedar.monitor.resources.*;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceIndexResource;
 import org.metadatacenter.cedar.util.dw.CedarDefaultHealthCheck;
+import org.metadatacenter.cedar.util.dw.CedarHibernateBundle;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplicationWithMongo;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.MongoConfig;
@@ -21,7 +21,7 @@ import org.metadatacenter.server.search.util.IndexUtils;
 
 public class MonitorServerApplication extends CedarMicroserviceApplicationWithMongo<MonitorServerConfiguration> {
 
-  private HibernateBundle<MonitorServerConfiguration> hibernate;
+  private CedarHibernateBundle<MonitorServerConfiguration> hibernate;
   private ApplicationRequestLogDAO requestLogDAO;
   private ApplicationCypherLogDAO cypherLogDAO;
 
@@ -36,8 +36,8 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
 
   @Override
   protected void initializeWithBootstrap(Bootstrap<MonitorServerConfiguration> bootstrap, CedarConfig cedarConfig) {
-    hibernate = new CedarMonitorHibernateBundle(
-        cedarConfig,
+    hibernate = new CedarHibernateBundle<>(
+        cedarConfig.getDBLoggingConfig(),
         ApplicationRequestLog.class, new Class[]{
         ApplicationCypherLog.class,
     }
