@@ -1,6 +1,12 @@
 package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
@@ -39,6 +45,8 @@ import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
 
 @Path("/resources")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "Counts")
+@SecurityRequirement(name = "api_key")
 public class ResourceCountsResource extends AbstractMonitorResource {
 
   private static final Logger log = LoggerFactory.getLogger(ResourceCountsResource.class);
@@ -65,7 +73,15 @@ public class ResourceCountsResource extends AbstractMonitorResource {
   @GET
   @Timed
   @Path("/counts")
-  public Response queueCounts() throws CedarException {
+  @Operation(summary = "Count what the workspace graph holds",
+      description = "Report how many users, groups, categories, folders, and artifacts of each type Neo4j holds. This is the authoritative count; the search index is compared against it.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "A count per kind, as the workspace graph has them"),
+      @ApiResponse(responseCode = "401", description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", description = "Internal server error")
+  })
+  public Response resourceCounts() throws CedarException {
 
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);

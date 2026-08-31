@@ -1,6 +1,12 @@
 package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.bridge.PathInfoBuilder;
 import org.metadatacenter.config.CedarConfig;
@@ -29,6 +35,8 @@ import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
 
 @Path("/resource")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "Diagnostics")
+@SecurityRequirement(name = "api_key")
 public class ResourceInfoFolder extends AbstractMonitorResource {
 
   private static final Logger log = LoggerFactory.getLogger(ResourceInfoFolder.class);
@@ -46,7 +54,21 @@ public class ResourceInfoFolder extends AbstractMonitorResource {
   @GET
   @Timed
   @Path("/folders")
-  public Response getFolderInfo(@QueryParam(PP_ID) String id) throws CedarException {
+  @Operation(summary = "Get everything CEDAR knows about a folder",
+      description = "Gather what each store holds about one folder into a single answer: the workspace graph's record of it and its path, its computed permissions, and the OpenSearch document. "
+          + "Written for diagnosis rather than for an application: the point is to see the stores "
+          + "side by side, since a folder that behaves oddly usually has one store disagreeing with "
+          + "another. A store that cannot be reached leaves its section null rather than failing the "
+          + "request, and an identifier nothing knows returns an empty answer with 200.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "What each store holds about the folder"),
+      @ApiResponse(responseCode = "401", description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", description = "Internal server error")
+  })
+  public Response getFolderInfo(
+      @Parameter(description = "Identifier of the folder to report on.", required = true)
+      @QueryParam(PP_ID) String id) throws CedarException {
 
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);
