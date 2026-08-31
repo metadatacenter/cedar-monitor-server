@@ -13,13 +13,16 @@ import org.metadatacenter.config.environment.CedarEnvironmentSource;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
 import org.metadatacenter.model.SystemComponent;
 import org.metadatacenter.util.json.JsonMapper;
+import org.metadatacenter.cedar.util.dw.CedarMicroserviceIndexResource;
 import org.metadatacenter.util.test.RouteSurface;
 import org.metadatacenter.util.test.TestAuthUtil;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -80,7 +83,7 @@ public class MonitorRoutesAndPermissionsTest {
     registeredComponents.addAll(resourceConfig.getClasses());
     registeredComponents.addAll(resourceConfig.getResources());
     return RouteSurface.registeredResourceClasses(registeredComponents, "org.metadatacenter").stream()
-        .filter(resourceClass -> !resourceClass.getSimpleName().equals("IndexResource"))
+        .filter(resourceClass -> !CedarMicroserviceIndexResource.class.isAssignableFrom(resourceClass))
         .toList();
   }
 
@@ -145,6 +148,33 @@ public class MonitorRoutesAndPermissionsTest {
     }
     Assertions.assertEquals(0, failures.length(),
         "Monitor endpoints did not admit an authorized admin:\n" + failures);
+  }
+
+  /**
+   * An identifier no store knows is an ordinary answer, not a failure.
+   *
+   * <p>These routes document "an identifier nothing knows returns an empty answer with 200", and the
+   * folder, group and user diagnostics have always guarded their lookup that way. The artifact one
+   * did not: it dereferenced the null the graph returned and answered 500, so asking about an
+   * identifier that had been deleted looked like a broken monitor rather than an absent artifact.
+   */
+  @Test
+  public void anUnknownArtifactIdentifierIsAnEmptyAnswerRatherThanAFailure() throws Exception {
+    for (String route : new String[] {"templates", "template-elements", "template-fields", "template-instances"}) {
+      HttpRequest request = HttpRequest.newBuilder()
+          .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/resource/" + route
+              + "?id=" + URLEncoder.encode("https://repo.metadatacenter.orgx/templates/nothing-knows-this",
+              StandardCharsets.UTF_8)))
+          .header("Authorization", adminUserAuthHeader)
+          .GET()
+          .build();
+
+      HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+      Assertions.assertEquals(200, response.statusCode(), route + ": " + response.body());
+      Assertions.assertTrue(JsonMapper.MAPPER.readTree(response.body()).isEmpty(),
+          route + " should report nothing rather than a partial record: " + response.body());
+    }
   }
 
   @Test

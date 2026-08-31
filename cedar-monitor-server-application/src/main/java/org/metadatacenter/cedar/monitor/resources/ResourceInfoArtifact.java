@@ -166,8 +166,14 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
     CategoryServiceSession categorySession = dataServices.getCategoryServiceSession(c);
     ResourcePermissionServiceSession permissionSession = dataServices.getResourcePermissionServiceSession(c);
 
+    // An identifier the graph does not know is an ordinary answer for a diagnostic route: the point
+    // is to report what each store holds, and "nothing" is a result. Reading on would dereference a
+    // null artifact and answer 500, which is what this did — alone among the four ResourceInfo
+    // resources, the other three having guarded their lookup all along.
     FolderServerArtifact artifact = folderSession.findArtifactById(aid);
-    readArtifactInfo(c, r, aid, artifact, folderSession, categorySession, permissionSession);
+    if (artifact != null) {
+      readArtifactInfo(c, r, aid, artifact, folderSession, categorySession, permissionSession);
+    }
 
     return Response.ok().entity(r).build();
   }
