@@ -40,6 +40,9 @@ public class HealthChecksResource extends AbstractMonitorResource {
 
   private static final Logger log = LoggerFactory.getLogger(HealthChecksResource.class);
 
+  /** Where every microservice publishes its health report, relative to its application base URL. */
+  private static final String HEALTH_CHECK_PATH = "healthcheck";
+
   public HealthChecksResource(CedarConfig cedarConfig) {
     super(cedarConfig);
   }
@@ -48,9 +51,9 @@ public class HealthChecksResource extends AbstractMonitorResource {
   @Timed
   @Path("/{server}")
   @Operation(summary = "Get another server's health check",
-      description = "Proxy the named server's Dropwizard health check on its admin port, which is "
-          + "not otherwise reachable from outside. The status and body are the other server's own, "
-          + "so a 500 here can mean that server is unhealthy rather than that this one failed.")
+      description = "Proxy the named server's health check. The status and body are the other "
+          + "server's own, so a 500 here can mean that server is unhealthy rather than that this "
+          + "one failed.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The named server's health check, as it reported it"),
       @ApiResponse(responseCode = "401", description = "Unauthorized"),
@@ -74,8 +77,17 @@ public class HealthChecksResource extends AbstractMonitorResource {
     if (serverConfig == null) {
       return CedarResponse.notFound().errorMessage("Server can not be found by name").parameter("server", server).build();
     }
+    if (serverConfig.getBase() == null) {
+      return CedarResponse.internalServerError()
+          .errorMessage("No application base URL is configured for this server, so its health cannot be read")
+          .parameter("server", server).build();
+    }
 
-    String url = serverConfig.getAdminBase() + "healthcheck";
+    // The application connector, not the admin one. Dropwizard's admin connector is bound to
+    // loopback so that /metrics and /threads stay off the network, which under Compose puts it out
+    // of reach of every container but its own; CedarHealthCheckResource publishes the same report
+    // here instead. ProxyUtil forwards this caller's credential, which that route requires.
+    String url = serverConfig.getBase() + HEALTH_CHECK_PATH;
     ClassicHttpResponse proxyResponse = ProxyUtil.proxyGet(url, c);
     ProxyUtil.proxyResponseHeaders(proxyResponse, response);
     HttpEntity entity = proxyResponse.getEntity();

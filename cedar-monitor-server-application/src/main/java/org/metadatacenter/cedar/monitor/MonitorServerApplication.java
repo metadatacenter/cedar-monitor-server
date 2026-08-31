@@ -6,7 +6,6 @@ import io.dropwizard.core.setup.Environment;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.cedar.monitor.resources.*;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceIndexResource;
-import org.metadatacenter.cedar.util.dw.CedarDefaultHealthCheck;
 import org.metadatacenter.cedar.util.dw.CedarHibernateBundle;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplicationWithMongo;
 import org.metadatacenter.config.CedarConfig;
@@ -75,8 +74,6 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
         new CedarMicroserviceIndexResource(cedarConfig, getServerName());
     environment.jersey().register(index);
 
-    final CedarDefaultHealthCheck healthCheck = new CedarDefaultHealthCheck();
-    environment.healthChecks().register("message", healthCheck);
 
     final ResourceInfoUser resourceInfoUser = new ResourceInfoUser(cedarConfig);
     environment.jersey().register(resourceInfoUser);
