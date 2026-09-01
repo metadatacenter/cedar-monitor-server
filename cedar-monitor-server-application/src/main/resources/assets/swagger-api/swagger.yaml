@@ -45,9 +45,8 @@ paths:
       - Diagnostics
   /health-check/{server}:
     get:
-      description: "Proxy the named server's Dropwizard health check on its admin\
-        \ port, which is not otherwise reachable from outside. The status and body\
-        \ are the other server's own, so a 500 here can mean that server is unhealthy\
+      description: "Proxy the named server's health check. The status and body are\
+        \ the other server's own, so a 500 here can mean that server is unhealthy\
         \ rather than that this one failed."
       operationId: healthCheck
       parameters:
