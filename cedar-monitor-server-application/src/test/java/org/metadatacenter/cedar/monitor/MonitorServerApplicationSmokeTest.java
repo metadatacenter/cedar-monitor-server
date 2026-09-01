@@ -24,11 +24,11 @@ public class MonitorServerApplicationSmokeTest {
 
   static {
     // Must run before the test support boots the server, which reads the port env vars.
-    // Alternate server ports, so the test instance never collides with a running dev server.
+    // OS-assigned server ports, so the test instance never collides with a running dev server.
     Map<String, String> environment = new HashMap<>(CedarEnvironmentSource.getAll());
-    environment.put("CEDAR_MONITOR_HTTP_PORT", "19014");
-    environment.put("CEDAR_MONITOR_ADMIN_PORT", "19114");
-    environment.put("CEDAR_MONITOR_STOP_PORT", "19214");
+    environment.put("CEDAR_MONITOR_HTTP_PORT", "0");
+    environment.put("CEDAR_MONITOR_ADMIN_PORT", "0");
+    environment.put("CEDAR_MONITOR_STOP_PORT", "0");
     CedarEnvironmentSource.setOverride(environment);
   }
 

@@ -1,6 +1,12 @@
 package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.model.CedarResourceType;
@@ -23,6 +29,8 @@ import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
 
 @Path("/resources")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "Counts")
+@SecurityRequirement(name = "api_key")
 public class ResourceCountsOpenSearchResource extends AbstractMonitorResource {
 
   private static final Logger log = LoggerFactory.getLogger(ResourceCountsOpenSearchResource.class);
@@ -38,6 +46,14 @@ public class ResourceCountsOpenSearchResource extends AbstractMonitorResource {
   @GET
   @Timed
   @Path("/counts/opensearch")
+  @Operation(summary = "Count what the search index holds",
+      description = "Report how many artifacts of each type OpenSearch has indexed. Read alongside the graph counts: the two disagreeing is how a half-finished reindex shows itself.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "A count per artifact type, as the search index has them"),
+      @ApiResponse(responseCode = "401", description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", description = "Internal server error")
+  })
   public Response openSearchCounts() throws CedarException {
 
     CedarRequestContext c = buildRequestContext();

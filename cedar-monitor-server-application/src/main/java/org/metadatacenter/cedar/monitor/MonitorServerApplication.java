@@ -1,12 +1,12 @@
 package org.metadatacenter.cedar.monitor;
 
 import com.mongodb.client.MongoClient;
-import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.core.setup.Bootstrap;
 import io.dropwizard.core.setup.Environment;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.cedar.monitor.resources.*;
-import org.metadatacenter.cedar.util.dw.CedarDefaultHealthCheck;
+import org.metadatacenter.cedar.util.dw.CedarMicroserviceIndexResource;
+import org.metadatacenter.cedar.util.dw.CedarHibernateBundle;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceApplicationWithMongo;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.MongoConfig;
@@ -20,7 +20,7 @@ import org.metadatacenter.server.search.util.IndexUtils;
 
 public class MonitorServerApplication extends CedarMicroserviceApplicationWithMongo<MonitorServerConfiguration> {
 
-  private HibernateBundle<MonitorServerConfiguration> hibernate;
+  private CedarHibernateBundle<MonitorServerConfiguration> hibernate;
   private ApplicationRequestLogDAO requestLogDAO;
   private ApplicationCypherLogDAO cypherLogDAO;
 
@@ -35,8 +35,8 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
 
   @Override
   protected void initializeWithBootstrap(Bootstrap<MonitorServerConfiguration> bootstrap, CedarConfig cedarConfig) {
-    hibernate = new CedarMonitorHibernateBundle(
-        cedarConfig,
+    hibernate = new CedarHibernateBundle<>(
+        cedarConfig.getDBLoggingConfig(),
         ApplicationRequestLog.class, new Class[]{
         ApplicationCypherLog.class,
     }
@@ -54,12 +54,9 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     NodeSearchingService nodeSearchingService = indexUtils.getNodeSearchingService();
 
     ResourceInfoUser.injectServices(userService, nodeSearchingService);
-    ResourceInfoGroup.injectServices(userService, nodeSearchingService);
-    ResourceInfoFolder.injectServices(userService, nodeSearchingService);
-    ResourceInfoTemplateField.injectServices(userService, nodeSearchingService);
-    ResourceInfoTemplateElement.injectServices(userService, nodeSearchingService);
-    ResourceInfoTemplate.injectServices(userService, nodeSearchingService);
-    ResourceInfoTemplateInstance.injectServices(userService, nodeSearchingService);
+    ResourceInfoGroup.injectServices(nodeSearchingService);
+    ResourceInfoFolder.injectServices(nodeSearchingService);
+    ResourceInfoArtifact.injectServices(nodeSearchingService);
 
     MongoConfig artifactServerConfig = cedarConfig.getArtifactServerConfig();
     CedarDataServices.initializeMongoClientFactoryForDocuments(artifactServerConfig.getMongoConnection());
@@ -73,11 +70,10 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
   @Override
   public void runApp(MonitorServerConfiguration configuration, Environment environment) {
 
-    final IndexResource index = new IndexResource(cedarConfig);
+    final CedarMicroserviceIndexResource index =
+        new CedarMicroserviceIndexResource(cedarConfig, getServerName());
     environment.jersey().register(index);
 
-    final CedarDefaultHealthCheck healthCheck = new CedarDefaultHealthCheck();
-    environment.healthChecks().register("message", healthCheck);
 
     final ResourceInfoUser resourceInfoUser = new ResourceInfoUser(cedarConfig);
     environment.jersey().register(resourceInfoUser);
@@ -88,17 +84,9 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     final ResourceInfoFolder info = new ResourceInfoFolder(cedarConfig);
     environment.jersey().register(info);
 
-    final ResourceInfoTemplateField resourceInfoTemplateField = new ResourceInfoTemplateField(cedarConfig);
-    environment.jersey().register(resourceInfoTemplateField);
-
-    final ResourceInfoTemplateElement resourceInfoTemplateElement = new ResourceInfoTemplateElement(cedarConfig);
-    environment.jersey().register(resourceInfoTemplateElement);
-
-    final ResourceInfoTemplate resourceInfoTemplate = new ResourceInfoTemplate(cedarConfig);
-    environment.jersey().register(resourceInfoTemplate);
-
-    final ResourceInfoTemplateInstance resourceInfoTemplateInstance = new ResourceInfoTemplateInstance(cedarConfig);
-    environment.jersey().register(resourceInfoTemplateInstance);
+    // One resource serves all four artifact kinds; each keeps its own path and OpenAPI entry.
+    final ResourceInfoArtifact resourceInfoArtifact = new ResourceInfoArtifact(cedarConfig);
+    environment.jersey().register(resourceInfoArtifact);
 
     final RedisQueueCountsResource redisQueueCounts = new RedisQueueCountsResource(cedarConfig);
     environment.jersey().register(redisQueueCounts);
