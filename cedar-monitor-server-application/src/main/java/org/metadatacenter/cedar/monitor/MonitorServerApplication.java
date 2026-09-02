@@ -97,6 +97,9 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     final ResourceCountsOpenSearchResource resourceCountsOpenSearch = new ResourceCountsOpenSearchResource(cedarConfig);
     environment.jersey().register(resourceCountsOpenSearch);
 
+    final MySqlCountsResource mySqlCounts = new MySqlCountsResource(cedarConfig);
+    environment.jersey().register(mySqlCounts);
+
     final HealthChecksResource healthChecksResource = new HealthChecksResource(cedarConfig);
     environment.jersey().register(healthChecksResource);
 

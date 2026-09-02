@@ -76,6 +76,40 @@
         "tags" : [ "Health checks" ]
       }
     },
+    "/mysql/counts" : {
+      "get" : {
+        "description" : "Report every table in every MySQL schema CEDAR's configured datasources can see — the application log database and the messaging database — with each table's row count, engine, and the space its data, indexes and freed pages occupy. Row counts are the optimizer's estimate unless exact=true is asked for, which counts the rows instead and can take a while over the log tables.",
+        "operationId" : "mySqlCounts",
+        "parameters" : [ {
+          "description" : "Count rows with COUNT(*) instead of reading the optimizer's estimate",
+          "in" : "query",
+          "name" : "exact",
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "A per-table report for each reachable database"
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Count and measure what MySQL holds",
+        "tags" : [ "Counts" ]
+      }
+    },
     "/redis/queue-counts" : {
       "get" : {
         "description" : "Report how many items are waiting in each of CEDAR's Redis queues: search permissions, NCBI submissions, application logs, value recommender, and instance cloning. A queue that keeps growing is the sign that whatever drains it has stopped.",
