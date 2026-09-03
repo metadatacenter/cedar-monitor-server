@@ -126,6 +126,15 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     final HealthChecksResource healthChecksResource = new HealthChecksResource(cedarConfig);
     environment.jersey().register(healthChecksResource);
 
+    final ServerReportResource serverReportResource = new ServerReportResource(cedarConfig);
+    environment.jersey().register(serverReportResource);
+
+    final HostReportResource hostReportResource = new HostReportResource(cedarConfig);
+    environment.jersey().register(hostReportResource);
+
+    final EnvironmentModelResource environmentModelResource = new EnvironmentModelResource(cedarConfig);
+    environment.jersey().register(environmentModelResource);
+
     final CommandResource commandResource = new CommandResource(cedarConfig);
     environment.jersey().register(commandResource);
 
@@ -137,6 +146,9 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
 
     final LogQueryResource logQueryResource = new LogQueryResource(cedarConfig, logQueryDAO);
     environment.jersey().register(logQueryResource);
+
+    final WorkerLagResource workerLagResource = new WorkerLagResource(cedarConfig, logQueryDAO);
+    environment.jersey().register(workerLagResource);
 
   }
 }
