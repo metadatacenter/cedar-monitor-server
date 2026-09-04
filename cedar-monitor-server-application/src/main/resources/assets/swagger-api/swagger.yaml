@@ -11,7 +11,7 @@ info:
     read against each other: the workspace graph is authoritative, and the search index disagreeing
     with it is how a half-finished reindex shows itself.
   title: CEDAR Monitor Server API
-  version: 2.9.6
+  version: 2.9.7
 paths:
   /command/resource-id-lookup:
     get:
@@ -43,6 +43,45 @@ paths:
       summary: Work out which artifact a string refers to
       tags:
       - Diagnostics
+  /environment-model/declarations:
+    get:
+      description: "The static declaration table for the frontends, the admin and\
+        \ caDSR tools, the Keycloak event listener and the shell utilities. Names\
+        \ only — these components are builds and scripts, not processes that can be\
+        \ asked what they resolved."
+      operationId: declarations
+      responses:
+        "200":
+          description: Declared variable names per component
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+      security:
+      - api_key: []
+      summary: Get the declared variables of every non-server component
+      tags:
+      - Environment model
+  /environment-model/unmodelled:
+    get:
+      description: "Names only, never values: a variable outside CedarEnvironmentVariable\
+        \ carries no secrecy flag, so its value is withheld. A name here is either\
+        \ a consumer reading the environment directly, or a variable that has fallen\
+        \ out of use."
+      operationId: unmodelled
+      responses:
+        "200":
+          description: Names of unmodelled CEDAR_* variables
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+      security:
+      - api_key: []
+      summary: Get CEDAR_* variables set on this host that the configuration model
+        does not define
+      tags:
+      - Environment model
   /health-check/{server}:
     get:
       description: "Proxy the named server's health check. The status and body are\
@@ -74,6 +113,347 @@ paths:
       summary: Get another server's health check
       tags:
       - Health checks
+  /host/disk:
+    get:
+      description: "Room left on the filesystems CEDAR writes to, plus the largest\
+        \ files under CEDAR_HOME/log with their sizes and ages. A large file that\
+        \ is still being written to is a log nothing is rotating."
+      operationId: disk
+      responses:
+        "200":
+          description: Filesystem usage and log file sizes
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+      security:
+      - api_key: []
+      summary: Get disk usage and the largest log files on this host
+      tags:
+      - Host
+  /host/git:
+    get:
+      description: "Branch, commit, commit date, upstream distance and uncommitted\
+        \ tracked-file count for each repository under CEDAR_HOME. A non-zero uncommitted\
+        \ count is a hot-patch applied directly on the box, which the next pull would\
+        \ overwrite."
+      operationId: git
+      responses:
+        "200":
+          description: One entry per repository
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+      security:
+      - api_key: []
+      summary: Get the git state of every CEDAR repository on this host
+      tags:
+      - Host
+  /logs/boards:
+    get:
+      operationId: boards
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/coverage:
+    get:
+      operationId: coverage
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/db-share:
+    get:
+      operationId: dbShare
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/explorer/cypher:
+    get:
+      operationId: cypher
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+      - in: query
+        name: minDurationMs
+        schema:
+          type: integer
+          format: int64
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/explorer/outliers/cypher:
+    get:
+      operationId: cypherOutliers
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/explorer/outliers/requests:
+    get:
+      operationId: requestOutliers
+      parameters:
+      - in: query
+        name: kind
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/explorer/requests:
+    get:
+      operationId: requests
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+      - in: query
+        name: minDurationMs
+        schema:
+          type: integer
+          format: int64
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/facets/{column}:
+    get:
+      operationId: facet
+      parameters:
+      - in: path
+        name: column
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: table
+        schema:
+          type: string
+      - in: query
+        name: from
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/query:
+    post:
+      operationId: query
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogQuerySpec"
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/trace/{globalRequestId}:
+    get:
+      operationId: trace
+      parameters:
+      - in: path
+        name: globalRequestId
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: maxSpans
+        schema:
+          type: integer
+          format: int32
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/usage/cypher:
+    get:
+      operationId: cypher_1
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/usage/endpoints:
+    get:
+      operationId: endpoints
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/usage/insights:
+    get:
+      operationId: insights
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/usage/summary:
+    get:
+      operationId: summary
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /logs/usage/users:
+    get:
+      operationId: users
+      parameters:
+      - in: query
+        name: from
+        schema:
+          type: string
+      - in: query
+        name: to
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+      responses:
+        default:
+          content:
+            application/json: {}
+          description: default response
+  /mysql/counts:
+    get:
+      description: "Report every table in every MySQL schema CEDAR's configured datasources\
+        \ can see — the application log database and the messaging database — with\
+        \ each table's row count, engine, and the space its data, indexes and freed\
+        \ pages occupy. Row counts are the optimizer's estimate unless exact=true\
+        \ is asked for, which counts the rows instead and can take a while over the\
+        \ log tables."
+      operationId: mySqlCounts
+      parameters:
+      - description: Count rows with COUNT(*) instead of reading the optimizer's estimate
+        in: query
+        name: exact
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          description: A per-table report for each reachable database
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+        "500":
+          description: Internal server error
+      security:
+      - api_key: []
+      summary: Count and measure what MySQL holds
+      tags:
+      - Counts
   /redis/queue-counts:
     get:
       description: "Report how many items are waiting in each of CEDAR's Redis queues:\
@@ -357,7 +737,214 @@ paths:
       summary: Count what the search index holds
       tags:
       - Counts
+  /server-report/{server}/build:
+    get:
+      description: "The version the named server's environment declares, together\
+        \ with the path and modification time of the artifact its JVM actually loaded,\
+        \ its uptime and its host."
+      operationId: build
+      parameters:
+      - description: "CEDAR server name, as the configuration spells it."
+        in: path
+        name: server
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: The named server's build report
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+        "404":
+          description: No CEDAR server answers to this name
+        "500":
+          description: The named server could not be read
+      security:
+      - api_key: []
+      summary: Get a server's version and build report
+      tags:
+      - Server report
+  /server-report/{server}/configuration:
+    get:
+      description: "cedar-main.yml as the named server resolved it, with secrets masked.\
+        \ Placeholders that could not be resolved are left as the literal ${NAME}."
+      operationId: configuration
+      parameters:
+      - description: "CEDAR server name, as the configuration spells it."
+        in: path
+        name: server
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: The named server's resolved configuration
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+        "404":
+          description: No CEDAR server answers to this name
+        "500":
+          description: The named server could not be read
+      security:
+      - api_key: []
+      summary: Get a server's resolved configuration
+      tags:
+      - Server report
+  /server-report/{server}/environment:
+    get:
+      description: "The environment variables the named server resolved its configuration\
+        \ from, with secret values masked and undeclared values withheld. Read one\
+        \ server per call; the monitoring UI reads all of them in parallel to build\
+        \ the drift matrix."
+      operationId: environment
+      parameters:
+      - description: "CEDAR server name, as the configuration spells it. Examples:\
+          \ artifact, terminology, resource."
+        in: path
+        name: server
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: The named server's environment report
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+        "404":
+          description: No CEDAR server answers to this name
+        "500":
+          description: The named server could not be read
+      security:
+      - api_key: []
+      summary: Get a server's environment variable report
+      tags:
+      - Server report
+  /server-report/{server}/insight:
+    get:
+      description: "Heap and non-heap memory, thread counts, garbage collection counts\
+        \ and host load for the named server. Thread stack traces are deliberately\
+        \ not included: the full dump runs to roughly half a megabyte per server and\
+        \ is served by the server's own /insight/thread-details."
+      operationId: insight
+      parameters:
+      - description: "CEDAR server name, as the configuration spells it."
+        in: path
+        name: server
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: The named server's JVM report
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+        "404":
+          description: No CEDAR server answers to this name
+        "500":
+          description: The named server could not be read
+      security:
+      - api_key: []
+      summary: Get a server's JVM report
+      tags:
+      - Server report
+  /worker/lag:
+    get:
+      description: "The depth of the application log queue in Redis together with\
+        \ the age of the newest row in each log table, and the verdict those two imply:\
+        \ OK, LAGGING or STALLED. Reported together because neither number means anything\
+        \ alone."
+      operationId: lag
+      responses:
+        "200":
+          description: "Queue depth, write lag and verdict"
+        "401":
+          description: Unauthorized
+        "403":
+          description: The caller lacks the monitor read permission
+        "500":
+          description: Redis or the log database could not be read
+      security:
+      - api_key: []
+      summary: Get the log pipeline's queue depth and write lag
+      tags:
+      - Worker
 components:
+  schemas:
+    Filter:
+      type: object
+      properties:
+        col:
+          type: string
+        op:
+          type: string
+        val:
+          type: string
+        vals:
+          type: array
+          items:
+            type: string
+    Having:
+      type: object
+      properties:
+        key:
+          type: string
+        op:
+          type: string
+        val:
+          type: string
+    LogQuerySpec:
+      type: object
+      properties:
+        cursor:
+          type: string
+        filters:
+          type: array
+          items:
+            $ref: "#/components/schemas/Filter"
+        from:
+          type: string
+        groupBy:
+          type: array
+          items:
+            type: string
+        grouped:
+          type: boolean
+        having:
+          type: array
+          items:
+            $ref: "#/components/schemas/Having"
+        limit:
+          type: integer
+          format: int32
+        metrics:
+          type: array
+          items:
+            type: string
+        orderBy:
+          type: array
+          items:
+            $ref: "#/components/schemas/Sort"
+        source:
+          type: string
+        table:
+          type: string
+        to:
+          type: string
+    Sort:
+      type: object
+      properties:
+        dir:
+          type: string
+        key:
+          type: string
   securitySchemes:
     api_key:
       description: "Your CEDAR API key, using the format 'apiKey <yourApiKey>'"
