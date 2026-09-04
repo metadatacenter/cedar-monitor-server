@@ -64,11 +64,18 @@ public class MonitorRoutesAndPermissionsTest {
     // Must run before the test support boots the server, which reads the port env vars. Ports are
     // assigned by the OS, so they cannot collide with the dev server or another test. Redis goes to a dead
     // port: no live Redis is needed to boot, and no probe here gets far enough to need one.
+    //
+    // The artifact server needs its application port deadened, not just its admin port, because a
+    // health check proxies to the application connector. Deadening only the admin port left the
+    // proxy free to reach whatever answered on the real application port, so the outage case below
+    // depended on no CEDAR stack running on the machine.
     Map<String, String> environment = new HashMap<>(CedarEnvironmentSource.getAll());
     environment.put("CEDAR_MONITOR_HTTP_PORT", "0");
     environment.put("CEDAR_MONITOR_ADMIN_PORT", "0");
     environment.put("CEDAR_MONITOR_STOP_PORT", "0");
     environment.put("CEDAR_REDIS_PERSISTENT_PORT", "1");
+    environment.put("CEDAR_ARTIFACT_SERVER_HOST", "127.0.0.1");
+    environment.put("CEDAR_ARTIFACT_HTTP_PORT", "1");
     environment.put("CEDAR_ARTIFACT_ADMIN_PORT", "1");
     CedarEnvironmentSource.setOverride(environment);
   }
