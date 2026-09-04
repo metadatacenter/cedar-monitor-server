@@ -71,7 +71,7 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
     cypherLogDAO = new ApplicationCypherLogDAO(hibernate.getSessionFactory());
     aggregationQueryDAO = new AggregationQueryDAO(hibernate.getSessionFactory());
     logExplorerDAO = new LogExplorerDAO(hibernate.getSessionFactory());
-    logQueryDAO = new LogQueryDAO(hibernate.getSessionFactory());
+    logQueryDAO = createLogQueryDAO();
 
     IndexUtils indexUtils = new IndexUtils(cedarConfig);
     NodeSearchingService nodeSearchingService = indexUtils.getNodeSearchingService();
@@ -88,6 +88,14 @@ public class MonitorServerApplication extends CedarMicroserviceApplicationWithMo
 
     initMongoServices(mongoClientForDocuments, artifactServerConfig);
 
+  }
+
+  /**
+   * Factory seam for tests whose concern is the HTTP/authorization contract rather than analytics
+   * over the logging database. Production always receives the Hibernate-backed DAO.
+   */
+  protected LogQueryDAO createLogQueryDAO() {
+    return new LogQueryDAO(hibernate.getSessionFactory());
   }
 
   @Override
