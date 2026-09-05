@@ -3,6 +3,8 @@ package org.metadatacenter.cedar.monitor.resources;
 import com.codahale.metrics.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -11,6 +13,7 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
@@ -77,9 +80,9 @@ public class ResourceInfoUser extends AbstractMonitorResource {
           + "request, and an identifier nothing knows returns an empty answer with 200.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "What each store holds about the user"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getUserInfo(
       @Parameter(description = "Identifier of the user to report on.", required = true)

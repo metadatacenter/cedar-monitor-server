@@ -3,7 +3,7 @@
   "info" : {
     "description" : "Better Metadata - Better Science\n\nThe monitor server reports on the rest of CEDAR: how deep the work queues are, how much each\nstore holds, whether a given server considers itself healthy, and what artifact a given string\nrefers to.\n\nEverything here is read-only and needs the monitor read permission. The counts are meant to be\nread against each other: the workspace graph is authoritative, and the search index disagreeing\nwith it is how a half-finished reindex shows itself.\n",
     "title" : "CEDAR Monitor Server API",
-    "version" : "2.9.7"
+    "version" : "2.9.8"
   },
   "paths" : {
     "/command/resource-id-lookup" : {
@@ -23,12 +23,33 @@
             "description" : "What the input resolved to, and how"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -48,9 +69,23 @@
             "description" : "Declared variable names per component"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           }
         },
@@ -70,9 +105,23 @@
             "description" : "Names of unmodelled CEDAR_* variables"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           }
         },
@@ -101,16 +150,37 @@
             "description" : "The named server's health check, as it reported it"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "No CEDAR server answers to this name"
           },
           "500" : {
-            "description" : "The named server reported itself unhealthy, or its response could not be read"
+            "description" : "The named server reported itself unhealthy with its own body, or its response could not be read"
           }
         },
         "security" : [ {
@@ -129,9 +199,23 @@
             "description" : "Filesystem usage and log file sizes"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           }
         },
@@ -151,9 +235,23 @@
             "description" : "One entry per repository"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           }
         },
@@ -597,12 +695,33 @@
             "description" : "A per-table report for each reachable database"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -622,12 +741,33 @@
             "description" : "A count per queue"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -656,12 +796,33 @@
             "description" : "What each store holds about the folder"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -690,12 +851,33 @@
             "description" : "What each store holds about the group"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -724,12 +906,33 @@
             "description" : "What each store holds about the template element"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -758,12 +961,33 @@
             "description" : "What each store holds about the template field"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -792,12 +1016,33 @@
             "description" : "What each store holds about the template instance"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -826,12 +1071,33 @@
             "description" : "What each store holds about the template"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -860,12 +1126,33 @@
             "description" : "What each store holds about the user"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -885,12 +1172,33 @@
             "description" : "A count per kind, as the workspace graph has them"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -910,12 +1218,33 @@
             "description" : "A count per artifact type, as the search index has them"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Internal server error"
           }
         },
@@ -944,15 +1273,43 @@
             "description" : "The named server's build report"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "No CEDAR server answers to this name"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The named server could not be read"
           }
         },
@@ -981,15 +1338,43 @@
             "description" : "The named server's resolved configuration"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "No CEDAR server answers to this name"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The named server could not be read"
           }
         },
@@ -1018,15 +1403,43 @@
             "description" : "The named server's environment report"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "No CEDAR server answers to this name"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The named server could not be read"
           }
         },
@@ -1055,15 +1468,43 @@
             "description" : "The named server's JVM report"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "No CEDAR server answers to this name"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The named server could not be read"
           }
         },
@@ -1083,12 +1524,33 @@
             "description" : "Queue depth, write lag and verdict"
           },
           "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Unauthorized"
           },
           "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "The caller lacks the monitor read permission"
           },
           "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
             "description" : "Redis or the log database could not be read"
           }
         },
@@ -1102,6 +1564,102 @@
   },
   "components" : {
     "schemas" : {
+      "CedarError" : {
+        "type" : "object",
+        "additionalProperties" : true,
+        "description" : "A CEDAR error response. Diagnostic fields are populated only when they are relevant to the failure.",
+        "properties" : {
+          "entities" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "object",
+              "description" : "Named domain entities associated with exception-mapped errors.",
+              "nullable" : true
+            },
+            "description" : "Named domain entities associated with exception-mapped errors.",
+            "nullable" : true
+          },
+          "errorId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Correlation identifier for an internal error recorded in server logs.",
+            "nullable" : true
+          },
+          "errorKey" : {
+            "type" : "string",
+            "description" : "Stable machine-readable error identifier.",
+            "enum" : [ "templateElementNotCreated", "templateElementNotFound", "templateElementNotDeleted", "templateElementNotUpdated", "templateElementsNotListed", "templateFieldNotCreated", "templateFieldNotFound", "templateFieldNotDeleted", "templateFieldNotUpdated", "templateFieldsNotListed", "templateNotCreated", "templateNotFound", "templateNotDeleted", "templateNotUpdated", "templatesNotListed", "templateInstanceNotCreated", "templateInstanceNotFound", "templateInstanceNotDeleted", "templateInstanceNotUpdated", "templateInstancesNotListed", "noReadAccessToResource", "noWriteAccessToResource", "noReadAccessToFolder", "noWriteAccessToFolder", "noReadAccessToTemplate", "noWriteAccessToTemplate", "noReadAccessToTemplateElement", "noWriteAccessToTemplateElement", "noReadAccessToTemplateField", "noWriteAccessToTemplateField", "noReadAccessToTemplateInstance", "noWriteAccessToTemplateInstance", "noReadAccessToArtifact", "noWriteAccessToArtifact", "noWriteAccessToCategory", "folderNotFound", "artifactNotFound", "artifactPreconditionRequired", "artifactHasMovedOn", "verbatimWriteRefused", "nodeNotFound", "unknownResourceType", "missingParameter", "invalidInput", "sourceFolderNotFound", "sourceResourceNotFound", "targetFolderNotFound", "nodeNotMoved", "groupNotFound", "userNotFound", "uniqueConstraintCollision", "invalidData", "notAuthorized", "permissionMissing", "tokenInvalid", "userInfoLoadByTokenFailed", "userInfoLoadByApiKeyFailed", "cedarUserNotFound", "authorizationNotFound", "permissionNotOwned", "authorizationTypeUnknown", "apiKeyNotFound", "tokenMissing", "tokenExpired", "parentFolderNotSpecified", "parentFolderSpecifiedTwice", "pathNotNormalized", "parentFolderNotFound", "updateInvalidFolderName", "createInvalidFolderName", "nodeAlreadyPresent", "folderNotCreated", "missingNameAndDescription", "missingData", "folderNotDeleted", "artifactNotDeleted", "resourceNotCreated", "invalidResourceType", "invalidArtifactType", "readOtherProfileForbidden", "updateOtherProfileForbidden", "folderCanNotBeDeleted", "folderCanNotBeChanged", "groupAlreadyPresent", "groupCanBeModifiedOnlyByGroupAdmin", "groupCanBeDeletedOnlyByGroupAdmin", "groupUsersNotUpdated", "specialGroupCanNotBeDeleted", "folderPermissionsCanNotBeChanged", "unknownInstanceOutputFormat", "folderCopyNotAllowed", "methodNotImplemented", "upstreamServerError", "nothingToDo", "parentCategoryNotFound", "categoryAlreadyPresent", "categoryNotFound", "categoryCanNotBeDeleted", "rootCategoryCanNotBeDeleted", "unableToAttachCategory", "unableToDetachCategory", "noCategoriesWereAttached", "malformedJsonRequestBody", "malformedSearchTerm", "publishedArtifactCanNotBeChanged", "publishedArtifactCanNotBeDeleted", "versioningOnlyOnLatest", "versioningOnlyByOwner", "nonVersionedArtifactType", "createDraftOnlyFromPublished", "publishOnlyDraft", "draftNotCreated", "contentNotValid", "doiNotSupportedByResourceType", "doiCanNotBeSetForEmptyAtId", "doiCanNotBeAltered", "doiCanNotBeSet", "doiAlreadyExists", "dataCiteDOIDisabled", "resourceNotFound", "internalError" ],
+            "nullable" : true
+          },
+          "errorMessage" : {
+            "type" : "string",
+            "description" : "Alias of message retained for compatibility.",
+            "nullable" : true
+          },
+          "errorReasonKey" : {
+            "type" : "string",
+            "description" : "More specific machine-readable reason for the error.",
+            "enum" : [ "nonEmptyFolder", "nonEmptyCategory", "userHomeFolder", "systemFolder", "templateReferencedInInstances", "validationError", "continuationExpired" ],
+            "nullable" : true
+          },
+          "errorType" : {
+            "type" : "string",
+            "description" : "Broad category of the error.",
+            "enum" : [ "notFound", "invalidArgument", "authorization", "permission", "server", "validationError" ],
+            "nullable" : true
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Human-readable error message.",
+            "nullable" : true
+          },
+          "objects" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "object",
+              "description" : "Named structured values associated with the error."
+            },
+            "description" : "Named structured values associated with the error."
+          },
+          "operation" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "object",
+              "description" : "Operation that failed. Its fields depend on the operation type.",
+              "nullable" : true
+            },
+            "description" : "Operation that failed. Its fields depend on the operation type.",
+            "nullable" : true
+          },
+          "parameters" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "object",
+              "description" : "Named scalar values associated with the error."
+            },
+            "description" : "Named scalar values associated with the error."
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "Symbolic HTTP response status.",
+            "enum" : [ "BAD_REQUEST", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND", "METHOD_NOT_ALLOWED", "NOT_ACCEPTABLE", "CONFLICT", "PRECONDITION_FAILED", "UNSUPPORTED_MEDIA_TYPE", "UNPROCESSABLE_ENTITY", "PRECONDITION_REQUIRED", "INTERNAL_SERVER_ERROR", "NOT_IMPLEMENTED", "BAD_GATEWAY", "SERVICE_UNAVAILABLE", "HTTP_VERSION_NOT_SUPPORTED" ]
+          },
+          "statusCode" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Numeric HTTP response status.",
+            "maximum" : 599,
+            "minimum" : 400
+          },
+          "suggestedAction" : {
+            "type" : "string",
+            "description" : "Recovery action suggested to the client.",
+            "enum" : [ "none", "requestRole", "logout", "logoutImmediately", "provideAuthorizationHeader", "refreshToken" ],
+            "nullable" : true
+          }
+        },
+        "required" : [ "status", "statusCode" ]
+      },
       "Filter" : {
         "type" : "object",
         "properties" : {

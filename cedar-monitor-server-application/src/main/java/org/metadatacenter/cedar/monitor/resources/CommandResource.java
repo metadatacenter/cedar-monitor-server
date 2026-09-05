@@ -3,12 +3,15 @@ package org.metadatacenter.cedar.monitor.resources;
 import com.codahale.metrics.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.hc.core5.http.NameValuePair;
 import org.apache.hc.core5.net.URLEncodedUtils;
+import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.id.CedarFQResourceId;
@@ -68,9 +71,9 @@ public class CommandResource extends AbstractMonitorResource {
           + "resolves to nothing is a finding, not a failed request, and the body says so.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "What the input resolved to, and how"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response lookUpResource(
       @Parameter(description = "The string to resolve. Leading and trailing space is trimmed; the "

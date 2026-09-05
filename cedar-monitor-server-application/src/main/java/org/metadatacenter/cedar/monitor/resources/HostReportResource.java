@@ -2,10 +2,13 @@ package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.cedar.monitor.host.HostInspector;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentVariable;
@@ -63,8 +66,8 @@ public class HostReportResource extends AbstractMonitorResource {
           + "directly on the box, which the next pull would overwrite.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "One entry per repository"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission")
   })
   public Response git() throws CedarException {
     authorize();
@@ -86,8 +89,8 @@ public class HostReportResource extends AbstractMonitorResource {
           + "log nothing is rotating.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Filesystem usage and log file sizes"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission")
   })
   public Response disk() throws CedarException {
     authorize();

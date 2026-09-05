@@ -12,6 +12,8 @@ import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
 import org.metadatacenter.model.SystemComponent;
+import org.metadatacenter.server.logging.dao.query.LogQueryDAO;
+import org.metadatacenter.server.logging.query.LogQueryResults.QueryResult;
 import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceIndexResource;
 import org.metadatacenter.util.test.RouteSurface;
@@ -23,11 +25,19 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Pins the monitor server's authorization contract. Every monitor endpoint is guarded twice — it
@@ -48,21 +58,31 @@ import java.util.Map;
  */
 public class MonitorRoutesAndPermissionsTest {
 
+  private static final LogQueryDAO LOG_QUERY_DAO = mock(LogQueryDAO.class);
+
   static {
     // Must run before the test support boots the server, which reads the port env vars. Ports are
     // assigned by the OS, so they cannot collide with the dev server or another test. Redis goes to a dead
     // port: no live Redis is needed to boot, and no probe here gets far enough to need one.
+    //
+    // The artifact server needs its application port deadened, not just its admin port, because a
+    // health check proxies to the application connector. Deadening only the admin port left the
+    // proxy free to reach whatever answered on the real application port, so the outage case below
+    // depended on no CEDAR stack running on the machine.
     Map<String, String> environment = new HashMap<>(CedarEnvironmentSource.getAll());
     environment.put("CEDAR_MONITOR_HTTP_PORT", "0");
     environment.put("CEDAR_MONITOR_ADMIN_PORT", "0");
     environment.put("CEDAR_MONITOR_STOP_PORT", "0");
     environment.put("CEDAR_REDIS_PERSISTENT_PORT", "1");
+    environment.put("CEDAR_ARTIFACT_SERVER_HOST", "127.0.0.1");
+    environment.put("CEDAR_ARTIFACT_HTTP_PORT", "1");
     environment.put("CEDAR_ARTIFACT_ADMIN_PORT", "1");
     CedarEnvironmentSource.setOverride(environment);
   }
 
   private static final DropwizardTestSupport<MonitorServerConfiguration> SERVER =
-      new DropwizardTestSupport<>(MonitorServerApplication.class, ResourceHelpers.resourceFilePath("test-config.yml"));
+      new DropwizardTestSupport<>(TestMonitorServerApplication.class,
+          ResourceHelpers.resourceFilePath("test-config.yml"));
 
   private static final HttpClient CLIENT = HttpClient.newHttpClient();
 
@@ -92,12 +112,23 @@ public class MonitorRoutesAndPermissionsTest {
 
   @BeforeAll
   public static void oneTimeSetUp() throws Exception {
+    when(LOG_QUERY_DAO.dbTimeShare(any(Instant.class), any(Instant.class), anyInt()))
+        .thenReturn(new QueryResult(List.of(), List.of(), 0, false, null, 0, true,
+            "test fixture", List.of()));
     SERVER.before();
     Map<String, String> environment = CedarEnvironmentVariableProvider.getFor(SystemComponent.SERVER_MONITOR);
     CedarConfig cedarConfig = CedarConfig.getInstance(environment);
     TestAuthUtil.installInMemoryUserService(cedarConfig);
     normalUserAuthHeader = TestAuthUtil.getTestUser1AuthHeader(cedarConfig);
     adminUserAuthHeader = TestAuthUtil.getAdminUserAuthHeader(cedarConfig);
+  }
+
+  /** The authorization sweep must not turn into an analytics benchmark over the developer's logs. */
+  public static class TestMonitorServerApplication extends MonitorServerApplication {
+    @Override
+    protected LogQueryDAO createLogQueryDAO() {
+      return LOG_QUERY_DAO;
+    }
   }
 
   @AfterAll
@@ -148,6 +179,24 @@ public class MonitorRoutesAndPermissionsTest {
     }
     Assertions.assertEquals(0, failures.length(),
         "Monitor endpoints did not admit an authorized admin:\n" + failures);
+  }
+
+  @Test
+  public void authorizedDbShareUsesTheIsolatedDao() throws Exception {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/logs/db-share"))
+        .header("Authorization", adminUserAuthHeader)
+        .GET()
+        .build();
+
+    HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    Assertions.assertEquals(200, response.statusCode(), response.body());
+    JsonNode result = JsonMapper.MAPPER.readTree(response.body());
+    Assertions.assertEquals(0, result.path("rowCount").asInt(), response.body());
+    Assertions.assertEquals("test fixture", result.path("source").asText(), response.body());
+    verify(LOG_QUERY_DAO, atLeastOnce())
+        .dbTimeShare(any(Instant.class), any(Instant.class), anyInt());
   }
 
   /**

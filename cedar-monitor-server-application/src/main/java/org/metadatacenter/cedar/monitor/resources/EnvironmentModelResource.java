@@ -2,10 +2,13 @@ package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarConfigEnvironmentDescriptor;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
@@ -80,8 +83,8 @@ public class EnvironmentModelResource extends AbstractMonitorResource {
           + "not processes that can be asked what they resolved.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Declared variable names per component"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission")
   })
   public Response declarations() throws CedarException {
     authorize();
@@ -150,8 +153,8 @@ public class EnvironmentModelResource extends AbstractMonitorResource {
           + "environment directly, or a variable that has fallen out of use.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Names of unmodelled CEDAR_* variables"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission")
   })
   public Response unmodelled() throws CedarException {
     authorize();

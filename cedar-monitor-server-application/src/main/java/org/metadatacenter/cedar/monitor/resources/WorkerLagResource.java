@@ -3,10 +3,13 @@ package org.metadatacenter.cedar.monitor.resources;
 import com.codahale.metrics.annotation.Timed;
 import io.dropwizard.hibernate.UnitOfWork;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.config.CacheServerPersistent;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
@@ -79,9 +82,9 @@ public class WorkerLagResource extends AbstractMonitorResource {
           + "because neither number means anything alone.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Queue depth, write lag and verdict"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
-      @ApiResponse(responseCode = "500", description = "Redis or the log database could not be read")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Redis or the log database could not be read")
   })
   public Response lag() throws CedarException {
     CedarRequestContext c = buildRequestContext();

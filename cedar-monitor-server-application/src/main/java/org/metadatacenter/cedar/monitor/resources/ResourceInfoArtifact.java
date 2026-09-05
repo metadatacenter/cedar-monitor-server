@@ -3,10 +3,13 @@ package org.metadatacenter.cedar.monitor.resources;
 import com.codahale.metrics.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.bridge.PathInfoBuilder;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
@@ -76,9 +79,9 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
           + "request, and an identifier nothing knows returns an empty answer with 200.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "What each store holds about the template"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getTemplateInfo(
       @Parameter(description = "Identifier of the template to report on.", required = true)
@@ -97,9 +100,9 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
           + "request, and an identifier nothing knows returns an empty answer with 200.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "What each store holds about the template element"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getTemplateElementInfo(
       @Parameter(description = "Identifier of the template element to report on.", required = true)
@@ -118,9 +121,9 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
           + "request, and an identifier nothing knows returns an empty answer with 200.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "What each store holds about the template field"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getTemplateFieldInfo(
       @Parameter(description = "Identifier of the template field to report on.", required = true)
@@ -139,9 +142,9 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
           + "request, and an identifier nothing knows returns an empty answer with 200.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "What each store holds about the template instance"),
-      @ApiResponse(responseCode = "401", description = "Unauthorized"),
-      @ApiResponse(responseCode = "403", description = "The caller lacks the monitor read permission"),
-      @ApiResponse(responseCode = "500", description = "Internal server error")
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getTemplateInstanceInfo(
       @Parameter(description = "Identifier of the template instance to report on.", required = true)
