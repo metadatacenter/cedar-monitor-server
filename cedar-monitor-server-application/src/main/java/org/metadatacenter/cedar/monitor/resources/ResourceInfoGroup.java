@@ -23,7 +23,7 @@ import org.metadatacenter.server.search.elasticsearch.service.NodeSearchingServi
 import org.metadatacenter.server.security.model.auth.CedarGroupUsers;
 import org.metadatacenter.server.security.model.auth.CedarNodeMaterializedPermissions;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
-import org.metadatacenter.server.security.model.permission.resource.FilesystemResourcePermission;
+import org.metadatacenter.server.security.model.permission.resource.ResourceRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,14 +105,16 @@ public class ResourceInfoGroup extends AbstractMonitorResource {
     r.put("searchCedarIds", allSearchCedarIds);
 
 
-    String readKey = CedarNodeMaterializedPermissions.getKey(gid.getId(), FilesystemResourcePermission.READ);
-    String writeKey = CedarNodeMaterializedPermissions.getKey(gid.getId(), FilesystemResourcePermission.WRITE);
+    String viewerKey = CedarNodeMaterializedPermissions.getKey(gid.getId(), ResourceRole.VIEWER);
+    String editorKey = CedarNodeMaterializedPermissions.getKey(gid.getId(), ResourceRole.EDITOR);
+    String managerKey = CedarNodeMaterializedPermissions.getKey(gid.getId(), ResourceRole.MANAGER);
 
     Map<String, Object> opensearch = new HashMap<>();
     r.put("opensearch", opensearch);
 
-    opensearch.put("readKey", readKey);
-    opensearch.put("writeKey", writeKey);
+    opensearch.put("viewerKey", viewerKey);
+    opensearch.put("editorKey", editorKey);
+    opensearch.put("managerKey", managerKey);
   }
 
   private List<String> findAllSearchCedarIds(CedarGroupId groupId) {

@@ -29,7 +29,7 @@ import org.metadatacenter.server.search.elasticsearch.service.NodeSearchingServi
 import org.metadatacenter.server.security.KeycloakUtilInfo;
 import org.metadatacenter.server.security.KeycloakUtils;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
-import org.metadatacenter.server.security.model.permission.resource.FilesystemResourcePermission;
+import org.metadatacenter.server.security.model.permission.resource.ResourceRole;
 import org.metadatacenter.server.security.model.user.CedarGroupExtract;
 import org.metadatacenter.server.security.model.user.CedarUser;
 import org.metadatacenter.server.security.model.user.ResourcePublicationStatusFilter;
@@ -152,31 +152,45 @@ public class ResourceInfoUser extends AbstractMonitorResource {
 
     Map<String, Object> counts2 = new HashMap<>();
     counts2.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser,
-        FilesystemResourcePermission.READ));
+        ResourceRole.VIEWER));
     counts2.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser,
-        FilesystemResourcePermission.READ));
+        ResourceRole.VIEWER));
     counts2.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser,
-        FilesystemResourcePermission.READ));
+        ResourceRole.VIEWER));
     counts2.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser,
-        FilesystemResourcePermission.READ));
+        ResourceRole.VIEWER));
     counts2.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser,
-        FilesystemResourcePermission.READ));
+        ResourceRole.VIEWER));
 
-    opensearch.put("readableCount", counts2);
+    opensearch.put("viewerCount", counts2);
 
     Map<String, Object> counts3 = new HashMap<>();
     counts3.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser,
-        FilesystemResourcePermission.WRITE));
+        ResourceRole.EDITOR));
     counts3.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser,
-        FilesystemResourcePermission.WRITE));
+        ResourceRole.EDITOR));
     counts3.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser,
-        FilesystemResourcePermission.WRITE));
+        ResourceRole.EDITOR));
     counts3.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser,
-        FilesystemResourcePermission.WRITE));
+        ResourceRole.EDITOR));
     counts3.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser,
-        FilesystemResourcePermission.WRITE));
+        ResourceRole.EDITOR));
 
-    opensearch.put("writeableCount", counts3);
+    opensearch.put("editorCount", counts3);
+
+    Map<String, Object> counts4 = new HashMap<>();
+    counts4.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser,
+        ResourceRole.MANAGER));
+    counts4.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser,
+        ResourceRole.MANAGER));
+    counts4.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser,
+        ResourceRole.MANAGER));
+    counts4.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser,
+        ResourceRole.MANAGER));
+    counts4.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser,
+        ResourceRole.MANAGER));
+
+    opensearch.put("managerCount", counts4);
 
 
     Map<String, Object> keycloak = new HashMap<>();
@@ -203,11 +217,11 @@ public class ResourceInfoUser extends AbstractMonitorResource {
   }
 
   private long getAccessibleSearchIndexDocumentCount(CedarResourceType resourceType, CedarUser cedarUser,
-                                                     FilesystemResourcePermission permission) {
+                                                     ResourceRole role) {
     List<String> resourceTypes = new ArrayList<>();
     resourceTypes.add(resourceType.getValue());
     try {
-      return nodeSearchingService.searchAccessibleResourceCountByUser(resourceTypes, permission, cedarUser);
+      return nodeSearchingService.searchAccessibleResourceCountByUser(resourceTypes, role, cedarUser);
     } catch (CedarProcessingException e) {
       log.error("Error while reading accessible document count", e);
     }
