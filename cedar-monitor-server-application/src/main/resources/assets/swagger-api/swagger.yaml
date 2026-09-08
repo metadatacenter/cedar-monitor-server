@@ -31,6 +31,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceIdLookup"
           description: "What the input resolved to, and how"
         "401":
           content:
@@ -64,6 +68,10 @@ paths:
       operationId: declarations
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvironmentDeclarationReport"
           description: Declared variable names per component
         "401":
           content:
@@ -91,6 +99,10 @@ paths:
       operationId: unmodelled
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnmodelledEnvironmentReport"
           description: Names of unmodelled CEDAR_* variables
         "401":
           content:
@@ -126,6 +138,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthCheckReport"
           description: "The named server's health check, as it reported it"
         "401":
           content:
@@ -161,6 +177,10 @@ paths:
       operationId: disk
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostDiskReport"
           description: Filesystem usage and log file sizes
         "401":
           content:
@@ -188,6 +208,10 @@ paths:
       operationId: git
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostGitReport"
           description: One entry per repository
         "401":
           content:
@@ -208,278 +232,840 @@ paths:
       - Host
   /logs/boards:
     get:
+      description: "The catalogue of predefined questions, each one a saved query\
+        \ spec a client can load into the same controls and edit. The catalogue is\
+        \ served from here so a client's list cannot drift from what the query engine\
+        \ supports. Specs carry no time range: the caller supplies one, and `defaultRangeMinutes`\
+        \ is only a suggested starting window. A few boards join the two log tables\
+        \ and so cannot be a spec; those name a route in `endpoint`, which the caller\
+        \ reads instead of posting `spec`. Requires the monitor read permission."
       operationId: boards
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Board"
+          description: The board catalogue
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+      security:
+      - api_key: []
+      summary: List the predefined Insight boards
+      tags:
+      - Log query
   /logs/coverage:
     get:
+      description: "Per log table: the columns a query may name, which of them can\
+        \ be grouped and which aggregated, and the rows and time window the table\
+        \ actually holds. Some columns were added after logging began and so carry\
+        \ values only for recent rows; the notes on a column say so. A client reads\
+        \ this to state its own caveats rather than showing a column that looks broken.\
+        \ Requires the monitor read permission."
       operationId: coverage
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoverageResult"
+          description: The queryable surface and the data behind it
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The log database could not be read
+      security:
+      - api_key: []
+      summary: Describe what is queryable and what is actually present
+      tags:
+      - Log query
   /logs/db-share:
     get:
+      description: "One row per handler and component over the range, slowest in total\
+        \ first, with the request count, the summed handler time, the summed Cypher\
+        \ time and the share the second is of the first. The answer comes back in\
+        \ the same shape as a structured query, so a client renders it with the same\
+        \ table. It needs a route of its own only because it joins the request log\
+        \ to the Cypher log, which a spec cannot express. Requires the monitor read\
+        \ permission."
       operationId: dbShare
       parameters:
-      - in: query
+      - description: "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to seven days before the upper bound."
+        in: query
         name: from
         schema:
           type: string
-      - in: query
+      - description: "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to now."
+        in: query
         name: to
         schema:
           type: string
-      - in: query
+      - description: How many rows to return. Defaults to 100 and is capped at 500.
+        in: query
         name: limit
         schema:
           type: integer
           format: int32
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResult"
+          description: "One row per handler, slowest in total first"
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogQueryError"
+          description: "A bound was not an ISO-8601 instant, or `from` was not before\
+            \ `to`"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The log database could not be read
+      security:
+      - api_key: []
+      summary: Compare each handler's total time against the database time underneath
+        it
+      tags:
+      - Log query
   /logs/explorer/cypher:
     get:
+      description: "One row per Neo4j statement the raw Cypher log still holds, which\
+        \ covers roughly the last thirty days. This route reports statements CEDAR\
+        \ already ran, with their text, their bound parameters and how long each took.\
+        \ It does not accept or run a query of its own. Requires the monitor read\
+        \ permission."
       operationId: cypher
       parameters:
-      - in: query
+      - description: "Free-text filter, matched as a substring against the operation\
+          \ name, the statement hash, the handler class and the statement text. Omit\
+          \ to match every row."
+        in: query
         name: q
         schema:
           type: string
-      - in: query
+      - description: Keep only statements that took at least this many milliseconds.
+          Zero and negative values are treated as no filter.
+        in: query
         name: minDurationMs
         schema:
           type: integer
           format: int64
-      - in: query
+      - description: How many rows to return. Defaults to 100 and is capped at 500.
+        in: query
         name: limit
         schema:
           type: integer
           format: int32
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CypherRow"
+          description: "Matching Cypher rows, newest first"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The log database could not be read
+      security:
+      - api_key: []
+      summary: "List recently executed Cypher statements, newest first"
+      tags:
+      - Log explorer
   /logs/explorer/outliers/cypher:
     get:
+      description: "The Cypher instances the aggregator keeps past the prune, each\
+        \ with its full statement text and bound parameters. This route reports statements\
+        \ CEDAR already ran; it does not accept or run a query of its own. Requires\
+        \ the monitor read permission."
       operationId: cypherOutliers
       parameters:
-      - in: query
+      - description: How many rows to return. Defaults to 100 and is capped at 500.
+        in: query
         name: limit
         schema:
           type: integer
           format: int32
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CypherRow"
+          description: "Retained outlier Cypher rows, slowest first"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The log database could not be read
+      security:
+      - api_key: []
+      summary: "List the retained slowest Cypher statements, slowest first"
+      tags:
+      - Log explorer
   /logs/explorer/outliers/requests:
     get:
+      description: "The request instances the aggregator keeps past the prune, so\
+        \ a slow call from months ago is still readable. The rows carry no global\
+        \ request identifier, because the raw row they were copied from is gone. Requires\
+        \ the monitor read permission."
       operationId: requestOutliers
       parameters:
-      - in: query
+      - description: "Which kind of outlier to return, `SLOW` or `ERROR`. Matched\
+          \ case-insensitively. Omit to return both."
+        in: query
         name: kind
         schema:
           type: string
-      - in: query
+          enum:
+          - SLOW
+          - ERROR
+      - description: How many rows to return. Defaults to 100 and is capped at 500.
+        in: query
         name: limit
         schema:
           type: integer
           format: int32
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequestRow"
+          description: "Retained outlier request rows, slowest first"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The log database could not be read
+      security:
+      - api_key: []
+      summary: "List the retained slowest and failed requests, slowest first"
+      tags:
+      - Log explorer
   /logs/explorer/requests:
     get:
+      description: "One row per request the raw request log still holds, which covers\
+        \ roughly the last thirty days. Each row carries the caller, the handler that\
+        \ served it, the status and the handler duration in nanoseconds. Requires\
+        \ the monitor read permission."
       operationId: requests
       parameters:
-      - in: query
+      - description: "Free-text filter, matched as a substring against the path, the\
+          \ user identifier, the handler class and the global request identifier.\
+          \ Omit to match every row."
+        in: query
         name: q
         schema:
           type: string
-      - in: query
+      - description: Keep only requests whose handler took at least this many milliseconds.
+          Zero and negative values are treated as no filter.
+        in: query
         name: minDurationMs
         schema:
           type: integer
           format: int64
-      - in: query
+      - description: How many rows to return. Defaults to 100 and is capped at 500.
+        in: query
         name: limit
         schema:
           type: integer
           format: int32
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequestRow"
+          description: "Matching request rows, newest first"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The log database could not be read
+      security:
+      - api_key: []
+      summary: "List recent HTTP requests, newest first"
+      tags:
+      - Log explorer
   /logs/facets/{column}:
     get:
+      description: "What a filter dropdown needs: every value the column took over\
+        \ the range, most frequent first, with how often each occurred. Only columns\
+        \ the engine marks facetable can be asked for. The result says whether the\
+        \ value list was capped. Requires the monitor read permission."
       operationId: facet
       parameters:
-      - in: path
+      - description: "The column to enumerate, named as the coverage route names it."
+        in: path
         name: column
         required: true
         schema:
           type: string
-      - in: query
+      - description: Which log table to read. Defaults to the request log.
+        in: query
         name: table
         schema:
           type: string
-      - in: query
+      - description: "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to 24 hours before the upper bound."
+        in: query
         name: from
         schema:
           type: string
-      - in: query
+      - description: "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to now."
+        in: query
         name: to
         schema:
           type: string
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacetResult"
+          description: The column's distinct values and their counts
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogQueryError"
+          description: "The table or column is not known or not facetable, a bound\
+            \ was not an ISO-8601 instant, or `from` was not before `to`"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The log database could not be read
+      security:
+      - api_key: []
+      summary: "List the distinct values of one column, with their counts"
+      tags:
+      - Log query
   /logs/query:
     post:
+      description: "The one query surface the Explorer, the pivot view and every Insight\
+        \ board are built on. The body is a structured spec rather than SQL text:\
+        \ column names are resolved against an allowlist and values are bound, so\
+        \ a spec naming a column the engine does not know is rejected rather than\
+        \ run. An empty `groupBy` returns raw rows newest first, paged by the cursor\
+        \ the previous result handed back; a non-empty one returns an aggregate. The\
+        \ result carries its own provenance, so a caller can tell an exact answer\
+        \ from a histogram-approximate one and a complete result from a capped one.\
+        \ It is POST rather than GET because a spec with several filters and a metric\
+        \ list outgrows a URL. Requires the monitor read permission."
       operationId: query
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/LogQuerySpec"
+        description: "The query to run. Every field is optional and is normalized\
+          \ before use: `table` defaults to the request log, `source` selects the\
+          \ raw log tables or the hourly rollups, and `limit` is capped by the engine."
+        required: true
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueryResult"
+          description: "The columns, the rows and the result's provenance"
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogQueryError"
+          description: "The spec named an unknown table, column, metric or operator,\
+            \ or its cursor could not be read"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The log database could not be read
+      security:
+      - api_key: []
+      summary: Run a structured query over the log tables
+      tags:
+      - Log query
   /logs/trace/{globalRequestId}:
     get:
+      description: "One browser request fans out across microservices, so the identifier\
+        \ appears on several rows, and that fan-out is what this route shows. It returns\
+        \ one span per component that handled the request and one per Cypher statement\
+        \ underneath it, on a shared timeline, with the summed handler time, the summed\
+        \ database time and the share the second is of the first. A handler that is\
+        \ slow with a low share is slow for reasons other than the database. Spans\
+        \ overlap, so the summed times are not wall time; `spanMs` is. Requires the\
+        \ monitor read permission."
       operationId: trace
       parameters:
-      - in: path
+      - description: The global request identifier to resolve. An identifier no log
+          row carries answers 200 with no spans.
+        in: path
         name: globalRequestId
         required: true
         schema:
           type: string
-      - in: query
+      - description: How many spans to return per log table. Defaults to 500 and is
+          capped at 2000. Passing the cap is how a pathological request stays cheap
+          to look at.
+        in: query
         name: maxSpans
         schema:
           type: integer
           format: int32
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TraceResult"
+          description: The spans of the request and their cross-table totals
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogQueryError"
+          description: The identifier was blank
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The log database could not be read
+      security:
+      - api_key: []
+      summary: Resolve one global request identifier into a distributed trace
+      tags:
+      - Log query
   /logs/usage/cypher:
     get:
+      description: "One row per distinct Neo4j statement executed in the range, identified\
+        \ by its operation name and the hash of its text, most executed first. Each\
+        \ row carries how often the statement ran and how long it took, plus a sample\
+        \ of its text from the query catalogue, truncated to two thousand characters.\
+        \ This route reports statements CEDAR already ran. It does not accept or run\
+        \ a query of its own. Requires the monitor read permission."
       operationId: cypher_1
       parameters:
-      - in: query
+      - description: "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to seven days before the upper bound."
+        in: query
         name: from
         schema:
           type: string
-      - in: query
+      - description: "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to now."
+        in: query
         name: to
         schema:
           type: string
-      - in: query
+      - description: How many rows to return. Defaults to 50 and is capped at 500.
+        in: query
         name: limit
         schema:
           type: integer
           format: int32
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CypherStat"
+          description: "One row per distinct statement, most executed first"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The log database could not be read, or a bound was not an\
+            \ ISO-8601 instant"
+      security:
+      - api_key: []
+      summary: Break a time range down by Cypher statement
+      tags:
+      - Log usage
   /logs/usage/endpoints:
     get:
+      description: "One row per component, handler class, handler method and HTTP\
+        \ method seen in the range, busiest first. The percentiles come from the merged\
+        \ latency histogram of the covered hours; `maxNanos` is the largest single\
+        \ handler duration any of them recorded. Requires the monitor read permission."
       operationId: endpoints
       parameters:
-      - in: query
+      - description: "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to seven days before the upper bound."
+        in: query
         name: from
         schema:
           type: string
-      - in: query
+      - description: "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to now."
+        in: query
         name: to
         schema:
           type: string
-      - in: query
+      - description: How many rows to return. Defaults to 50 and is capped at 500.
+        in: query
         name: limit
         schema:
           type: integer
           format: int32
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EndpointStat"
+          description: "One row per endpoint, busiest first"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The log database could not be read, or a bound was not an\
+            \ ISO-8601 instant"
+      security:
+      - api_key: []
+      summary: Break a time range down by endpoint
+      tags:
+      - Log usage
   /logs/usage/insights:
     get:
+      description: "Four short lists drawn from the same breakdowns the other usage\
+        \ routes serve, each cut to five entries. Slow Cypher ranks the 95th percentile\
+        \ weighted by how often the statement ran, so a slow statement nobody calls\
+        \ does not crowd out a common one. Slow endpoints ranks the 95th percentile\
+        \ alone. Heaviest users are the busiest callers. Error hotspots rank the error\
+        \ rate among endpoints with at least twenty requests, below which a rate says\
+        \ little. Requires the monitor read permission."
       operationId: insights
       parameters:
-      - in: query
+      - description: "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to seven days before the upper bound."
+        in: query
         name: from
         schema:
           type: string
-      - in: query
+      - description: "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to now."
+        in: query
         name: to
         schema:
           type: string
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Insights"
+          description: The four pattern lists for the range
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The log database could not be read, or a bound was not an\
+            \ ISO-8601 instant"
+      security:
+      - api_key: []
+      summary: Get the notable patterns in a time range
+      tags:
+      - Log usage
   /logs/usage/summary:
     get:
+      description: "The totals over the range beside the hourly series they were summed\
+        \ from. Both come from the hourly rollups, so the newest hour appears only\
+        \ once the aggregator has closed it. Requires the monitor read permission."
       operationId: summary
       parameters:
-      - in: query
+      - description: "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to seven days before the upper bound."
+        in: query
         name: from
         schema:
           type: string
-      - in: query
+      - description: "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to now."
+        in: query
         name: to
         schema:
           type: string
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogUsageSummary"
+          description: Totals and the hourly series behind them
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The log database could not be read, or a bound was not an\
+            \ ISO-8601 instant"
+      security:
+      - api_key: []
+      summary: Get request volume and latency totals for a time range
+      tags:
+      - Log usage
   /logs/usage/users:
     get:
+      description: "One row per user identifier, authentication source and API key\
+        \ hash seen in the range, busiest first. A caller who used two keys appears\
+        \ once per key. Requires the monitor read permission."
       operationId: users
       parameters:
-      - in: query
+      - description: "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to seven days before the upper bound."
+        in: query
         name: from
         schema:
           type: string
-      - in: query
+      - description: "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults\
+          \ to now."
+        in: query
         name: to
         schema:
           type: string
-      - in: query
+      - description: How many rows to return. Defaults to 50 and is capped at 500.
+        in: query
         name: limit
         schema:
           type: integer
           format: int32
       responses:
-        default:
+        "200":
           content:
-            application/json: {}
-          description: default response
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserStat"
+          description: "One row per caller, busiest first"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The log database could not be read, or a bound was not an\
+            \ ISO-8601 instant"
+      security:
+      - api_key: []
+      summary: Break a time range down by caller
+      tags:
+      - Log usage
   /mysql/counts:
     get:
       description: "Report every table in every MySQL schema CEDAR's configured datasources\
@@ -498,6 +1084,10 @@ paths:
           default: false
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MySqlReport"
           description: A per-table report for each reachable database
         "401":
           content:
@@ -531,6 +1121,10 @@ paths:
       operationId: queueCounts
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueueDepths"
           description: A count per queue
         "401":
           content:
@@ -574,6 +1168,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FolderDiagnosticReport"
           description: What each store holds about the folder
         "401":
           content:
@@ -617,6 +1215,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupDiagnosticReport"
           description: What each store holds about the group
         "401":
           content:
@@ -661,6 +1263,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactDiagnosticReport"
           description: What each store holds about the template element
         "401":
           content:
@@ -705,6 +1311,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactDiagnosticReport"
           description: What each store holds about the template field
         "401":
           content:
@@ -749,6 +1359,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactDiagnosticReport"
           description: What each store holds about the template instance
         "401":
           content:
@@ -793,6 +1407,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactDiagnosticReport"
           description: What each store holds about the template
         "401":
           content:
@@ -837,6 +1455,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDiagnosticReport"
           description: What each store holds about the user
         "401":
           content:
@@ -869,6 +1491,10 @@ paths:
       operationId: resourceCounts
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreCounts"
           description: "A count per kind, as the workspace graph has them"
         "401":
           content:
@@ -901,6 +1527,10 @@ paths:
       operationId: openSearchCounts
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchIndexCounts"
           description: "A count per artifact type, as the search index has them"
         "401":
           content:
@@ -940,6 +1570,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerBuildReport"
           description: The named server's build report
         "401":
           content:
@@ -984,6 +1618,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerConfigurationReport"
           description: The named server's resolved configuration
         "401":
           content:
@@ -1031,6 +1669,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerEnvironmentReport"
           description: The named server's environment report
         "401":
           content:
@@ -1077,6 +1719,10 @@ paths:
           type: string
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServerJvmReport"
           description: The named server's JVM report
         "401":
           content:
@@ -1116,6 +1762,10 @@ paths:
       operationId: lag
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkerLagReport"
           description: "Queue depth, write lag and verdict"
         "401":
           content:
@@ -1142,6 +1792,92 @@ paths:
       - Worker
 components:
   schemas:
+    ArtifactCountsByType:
+      type: object
+      additionalProperties: false
+      description: One count per artifact type.
+      properties:
+        element:
+          type: integer
+          format: int64
+        field:
+          type: integer
+          format: int64
+        folder:
+          type: integer
+          format: int64
+        instance:
+          type: integer
+          format: int64
+        template:
+          type: integer
+          format: int64
+    ArtifactDiagnosticReport:
+      type: object
+      additionalProperties: false
+      description: |
+        What each store holds about one artifact. Empty where the workspace graph does not know the
+        identifier, since the graph's record is what the other sections are gathered from.
+      properties:
+        computed:
+          type: object
+          additionalProperties: false
+          description: What the workspace derives from the graph rather than stores
+            in it.
+          properties:
+            materializedPermissions:
+              $ref: "#/components/schemas/MaterializedPermissions"
+            permissions:
+              $ref: "#/components/schemas/ResourcePermissions"
+            report:
+              type: object
+              additionalProperties: true
+              description: |
+                The artifact report the workbench reads: the graph record together with the current
+                user's capabilities, the version chain, the categories attached to it and its DOI.
+        neo4j:
+          type: object
+          additionalProperties: false
+          properties:
+            artifact:
+              allOf:
+              - $ref: "#/components/schemas/WorkspaceResourceRecord"
+              description: "The graph's record of the artifact, with its path and\
+                \ parent folder resolved."
+        opensearch:
+          type: object
+          additionalProperties: false
+          properties:
+            document:
+              $ref: "#/components/schemas/SearchIndexDocument"
+        resourceType:
+          type: string
+          description: The kind the graph recorded for the identifier.
+          enum:
+          - field
+          - element
+          - template
+          - instance
+    Board:
+      type: object
+      properties:
+        defaultRangeMinutes:
+          type: integer
+          format: int32
+        endpoint:
+          type: string
+        group:
+          type: string
+        id:
+          type: string
+        note:
+          type: string
+        question:
+          type: string
+        spec:
+          $ref: "#/components/schemas/LogQuerySpec"
+        title:
+          type: string
     CedarError:
       type: object
       additionalProperties: true
@@ -1253,6 +1989,7 @@ components:
           - groupAlreadyPresent
           - groupCanBeModifiedOnlyByGroupAdmin
           - groupCanBeDeletedOnlyByGroupAdmin
+          - groupMembersCanBeReadOnlyByGroupAdmin
           - groupRequiresAdministrator
           - groupUsersNotUpdated
           - specialGroupCanNotBeDeleted
@@ -1382,6 +2119,284 @@ components:
       required:
       - status
       - statusCode
+    CedarGroupReference:
+      type: object
+      description: "A reference to a group. It appears wherever a group is named beside\
+        \ something else, as the holder of a grant or as a group a user belongs to.\
+        \ The name accompanies the identifier so a caller need not fetch the group\
+        \ record to display it."
+      properties:
+        '@id':
+          type: string
+          format: uri
+          description: Identifier of the group.
+        schema:name:
+          type: string
+          description: Display name of the group.
+      required:
+      - '@id'
+    CedarUserReference:
+      type: object
+      description: "A reference to a user. It appears wherever a user is named beside\
+        \ something else, as the owner of a resource, the holder of a grant, or a\
+        \ member of a group. The name and email accompany the identifier so a caller\
+        \ need not fetch the user record to display them."
+      properties:
+        '@id':
+          type: string
+          format: uri
+          description: Identifier of the user.
+        email:
+          type: string
+          format: email
+          description: Email address of the user.
+        firstName:
+          type: string
+          description: Given name of the user.
+        lastName:
+          type: string
+          description: Family name of the user.
+      required:
+      - '@id'
+    ColumnInfo:
+      type: object
+      properties:
+        aggregatable:
+          type: boolean
+        groupable:
+          type: boolean
+        key:
+          type: string
+        kind:
+          type: string
+        label:
+          type: string
+        note:
+          type: string
+    ColumnMeta:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        note:
+          type: string
+        type:
+          type: string
+          enum:
+          - STRING
+          - NUMBER
+          - NANOS
+          - TIMESTAMP
+          - TEXT
+    ComponentDeclarations:
+      type: object
+      additionalProperties: false
+      description: One non-server component and the variables it declares.
+      properties:
+        component:
+          type: string
+        variables:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeclaredEnvironmentVariable"
+    CoverageResult:
+      type: object
+      properties:
+        notes:
+          type: array
+          items:
+            type: string
+        tables:
+          type: array
+          items:
+            $ref: "#/components/schemas/TableCoverage"
+    CypherRow:
+      type: object
+      properties:
+        component:
+          type: string
+        durationNanos:
+          type: integer
+          format: int64
+        handler:
+          type: string
+        logTime:
+          type: string
+        operation:
+          type: string
+        parameters:
+          type: string
+        runnable:
+          type: string
+        runnableHash:
+          type: string
+    CypherStat:
+      type: object
+      properties:
+        execCount:
+          type: integer
+          format: int64
+        maxNanos:
+          type: integer
+          format: int64
+        operation:
+          type: string
+        p50Nanos:
+          type: integer
+          format: int64
+        p95Nanos:
+          type: integer
+          format: int64
+        p99Nanos:
+          type: integer
+          format: int64
+        runnableHash:
+          type: string
+        sample:
+          type: string
+    DeclaredEnvironmentVariable:
+      type: object
+      additionalProperties: false
+      description: "One variable a component declares. A declaration is not a value,\
+        \ and none is reported."
+      properties:
+        name:
+          type: string
+        presentInHostEnvironment:
+          type: boolean
+          description: "Whether this host sets the variable at all, which is the only\
+            \ fact about a value that a component with nothing running can honestly\
+            \ report."
+        secure:
+          type: boolean
+          description: Whether the variable is flagged secret.
+    EndpointStat:
+      type: object
+      properties:
+        className:
+          type: string
+        component:
+          type: string
+        errorCount:
+          type: integer
+          format: int64
+        httpMethod:
+          type: string
+        maxNanos:
+          type: integer
+          format: int64
+        methodName:
+          type: string
+        p50Nanos:
+          type: integer
+          format: int64
+        p95Nanos:
+          type: integer
+          format: int64
+        p99Nanos:
+          type: integer
+          format: int64
+        reqCount:
+          type: integer
+          format: int64
+    EnvironmentDeclarationReport:
+      type: object
+      additionalProperties: false
+      description: |
+        The static declaration table for the components that are builds and scripts rather than
+        running servers. Servers answer for themselves, with resolved values, on the server
+        environment report.
+      properties:
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComponentDeclarations"
+        note:
+          type: string
+          description: Why no value accompanies a declaration here.
+    EnvironmentVariableEntry:
+      type: object
+      additionalProperties: false
+      description: |
+        Where one variable stands for one server. The state is what matters: a variable the server
+        reads and the environment does not supply is a misconfiguration, while the same variable
+        absent from a server that never reads it is by design.
+      properties:
+        name:
+          type: string
+        presentInHostEnvironment:
+          type: boolean
+          description: Whether the host's process environment sets the variable at
+            all.
+        secure:
+          type: boolean
+          description: "Whether the variable is flagged secret, and so whether its\
+            \ value is masked."
+        state:
+          type: string
+          enum:
+          - SET
+          - DECLARED_BUT_UNSET
+          - USING_DEFAULT
+          - NOT_DECLARED
+        type:
+          type: string
+          enum:
+          - STRING
+          - NUMERIC
+          - BOOLEAN
+        value:
+          type: string
+          description: |
+            The value, masked where the variable is secret. Null unless the state is SET: a value the
+            server does not declare never leaves it, which is the point of the sandbox.
+          nullable: true
+    FacetResult:
+      type: object
+      properties:
+        column:
+          type: string
+        elapsedMs:
+          type: integer
+          format: int64
+        note:
+          type: string
+        table:
+          type: string
+        truncated:
+          type: boolean
+        values:
+          type: array
+          items:
+            $ref: "#/components/schemas/FacetValue"
+    FacetValue:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+        value:
+          type: string
+    FilesystemUsage:
+      type: object
+      additionalProperties: false
+      description: "The room left on one filesystem, read through a directory on it."
+      properties:
+        path:
+          type: string
+        totalBytes:
+          type: integer
+          format: int64
+        usableBytes:
+          type: integer
+          format: int64
+          description: What is left for this process.
+        usedPercent:
+          type: number
+          format: double
+          description: "How full the filesystem is, to one decimal place."
     Filter:
       type: object
       properties:
@@ -1395,6 +2410,104 @@ components:
           type: array
           items:
             type: string
+    FolderDiagnosticReport:
+      type: object
+      additionalProperties: false
+      description: |
+        What each store holds about one folder. Empty where the workspace graph does not know the
+        identifier, since the graph's record is what the other sections are gathered from.
+      properties:
+        computed:
+          type: object
+          additionalProperties: false
+          description: What the workspace derives from the graph rather than stores
+            in it.
+          properties:
+            materializedPermissions:
+              $ref: "#/components/schemas/MaterializedPermissions"
+            permissions:
+              $ref: "#/components/schemas/ResourcePermissions"
+        neo4j:
+          type: object
+          additionalProperties: false
+          properties:
+            folder:
+              allOf:
+              - $ref: "#/components/schemas/WorkspaceResourceRecord"
+              description: "The graph's record of the folder, with its path and parent\
+                \ folder resolved."
+        opensearch:
+          type: object
+          additionalProperties: false
+          properties:
+            document:
+              $ref: "#/components/schemas/SearchIndexDocument"
+        resourceType:
+          type: string
+          enum:
+          - folder
+    GroupDiagnosticReport:
+      type: object
+      additionalProperties: false
+      description: |
+        What each store holds about one group. Empty where the workspace graph does not know the
+        identifier, since the graph's record is what the other sections are gathered from.
+      properties:
+        groupUsers:
+          type: object
+          additionalProperties: false
+          description: The group's members and administrators.
+          properties:
+            users:
+              type: array
+              items:
+                $ref: "#/components/schemas/GroupMemberStanding"
+        neo4j:
+          allOf:
+          - $ref: "#/components/schemas/WorkspaceResourceRecord"
+          description: The graph's record of the group.
+        opensearch:
+          type: object
+          additionalProperties: false
+          description: |
+            The keys the search index permits this group's resources under, one per role. Computed
+            from the group identifier rather than read from the index, so they are what to look for
+            in a document that is not being found.
+          properties:
+            editorKey:
+              type: string
+            managerKey:
+              type: string
+            viewerKey:
+              type: string
+        resourceType:
+          type: string
+          enum:
+          - group
+        searchCedarIds:
+          type: array
+          description: |
+            Every indexed resource the group appears on. Null where OpenSearch could not be read:
+            the failure is logged rather than returned.
+          items:
+            type: string
+            format: uri
+          nullable: true
+    GroupMemberStanding:
+      type: object
+      additionalProperties: true
+      description: |
+        One user's standing in a group, as this service reports it. The group server's own
+        membership schema is the collection its API answers with, and its member schema carries a
+        different user reference, so this diagnostic rendering keeps a name of its own rather than
+        claiming to be either.
+      properties:
+        administrator:
+          type: boolean
+        member:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/CedarUserReference"
     Having:
       type: object
       properties:
@@ -1404,6 +2517,167 @@ components:
           type: string
         val:
           type: string
+    HealthCheckError:
+      type: object
+      additionalProperties: false
+      description: "What a health check threw, where it threw rather than reported."
+      properties:
+        cause:
+          $ref: "#/components/schemas/HealthCheckError"
+        message:
+          type: string
+          nullable: true
+        stack:
+          type: array
+          items:
+            type: string
+        type:
+          type: string
+    HealthCheckReport:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/HealthCheckResult"
+      description: |
+        The named server's health checks, keyed by check name and serialized as that server
+        serialized them. Which checks a server registers depends on the dependencies it holds.
+    HealthCheckResult:
+      type: object
+      additionalProperties: true
+      description: |
+        One check's result. A check may attach details of its own, so the object is left open.
+      properties:
+        duration:
+          type: integer
+          format: int64
+          description: "How long the check took, in milliseconds."
+        error:
+          $ref: "#/components/schemas/HealthCheckError"
+        healthy:
+          type: boolean
+        message:
+          type: string
+          description: What the check reported. Absent where it reported nothing.
+        timestamp:
+          type: string
+          description: When the check ran.
+    HostDiskReport:
+      type: object
+      additionalProperties: false
+      description: "Room left on the filesystems CEDAR writes to, and the largest\
+        \ files under its log directory."
+      properties:
+        cedarHome:
+          type: string
+          nullable: true
+        filesystems:
+          type: array
+          description: One entry per readable path. An unreadable path is skipped
+            rather than reported as empty.
+          items:
+            $ref: "#/components/schemas/FilesystemUsage"
+        logs:
+          $ref: "#/components/schemas/LogDirectoryReport"
+        scope:
+          type: string
+          description: Which host the report covers.
+    HostGitReport:
+      type: object
+      additionalProperties: false
+      description: The git state of every repository directly under CEDAR_HOME on
+        this host.
+      properties:
+        cedarHome:
+          type: string
+          description: "CEDAR_HOME as this service resolved it, or null where its\
+            \ sandbox does not carry it."
+          nullable: true
+        repositories:
+          type: array
+          description: "One entry per repository, sorted by name. Empty where CEDAR_HOME\
+            \ could not be listed."
+          items:
+            $ref: "#/components/schemas/RepositoryState"
+        scope:
+          type: string
+          description: Which host the report covers.
+    Insights:
+      type: object
+      properties:
+        errorHotspots:
+          type: array
+          items:
+            $ref: "#/components/schemas/EndpointStat"
+        heaviestUsers:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserStat"
+        slowestCypher:
+          type: array
+          items:
+            $ref: "#/components/schemas/CypherStat"
+        slowestEndpoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/EndpointStat"
+    LogDirectoryReport:
+      type: object
+      additionalProperties: false
+      description: "What the log directory holds, and the largest files in it."
+      properties:
+        directory:
+          type: string
+          nullable: true
+        error:
+          type: string
+          description: "What the walk reported, where it failed."
+        fileCount:
+          type: integer
+          format: int32
+          description: "Every regular file under the directory, not only the ones\
+            \ listed."
+        files:
+          type: array
+          description: "The largest files, biggest first, capped at twenty-five entries."
+          items:
+            $ref: "#/components/schemas/LogFileEntry"
+        readable:
+          type: boolean
+          description: False where the directory does not exist or could not be walked.
+        totalBytes:
+          type: integer
+          format: int64
+    LogFileEntry:
+      type: object
+      additionalProperties: false
+      description: One log file's size and age. A large file written to seconds ago
+        is a log nothing is rotating.
+      properties:
+        ageDays:
+          type: integer
+          format: int64
+        modifiedAt:
+          type: string
+          format: date-time
+        path:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+    LogQueryError:
+      type: object
+      additionalProperties: false
+      description: |
+        The body the log query routes answer a bad request with. It is not the CEDAR error envelope
+        every other route in this service uses: `badRequest` in LogQueryResource builds this one
+        directly. Documented as it behaves; converging it on the shared envelope would change what
+        a caller receives.
+      properties:
+        error:
+          type: string
+          description: "What was wrong with the request, in the words the query layer\
+            \ raised."
+      required:
+      - error
     LogQuerySpec:
       type: object
       properties:
@@ -1442,6 +2716,737 @@ components:
           type: string
         to:
           type: string
+    LogTableFreshness:
+      type: object
+      additionalProperties: false
+      description: "The newest row in one log table, and how far behind it is."
+      properties:
+        lagSeconds:
+          type: integer
+          format: int64
+          description: |
+            Seconds between that row and the log database's own UTC clock, or null where the table is
+            empty. A negative value is a clock disagreement rather than a lag, and is reported as it
+            was measured.
+          nullable: true
+        newestAt:
+          type: string
+          description: "That row's timestamp in UTC, or null where the table is empty."
+          nullable: true
+        sqlTable:
+          type: string
+          description: The physical table name.
+        table:
+          type: string
+          description: The table's key in the log query engine.
+    LogUsageSummary:
+      type: object
+      additionalProperties: false
+      description: |
+        The totals for a range beside the hourly series behind them. The range is echoed back as the
+        server resolved it, so a caller that omitted a bound can see which one it got.
+      properties:
+        from:
+          type: string
+          description: "The inclusive lower bound of the range, as a UTC instant."
+        series:
+          type: array
+          description: "One entry per hour that holds a row, oldest first. Hours with\
+            \ no traffic are absent."
+          items:
+            $ref: "#/components/schemas/TimeBucket"
+        to:
+          type: string
+          description: "The exclusive upper bound of the range, as a UTC instant."
+        totals:
+          $ref: "#/components/schemas/UsageTotals"
+    MaterializedPermissions:
+      type: object
+      additionalProperties: true
+      description: |
+        The grants after inheritance is resolved, which is the form the search index is permitted
+        against. A role here can come from a folder above the resource rather than from a grant on
+        the resource itself, so this and the recorded grants are expected to differ.
+      properties:
+        everybodyPermission:
+          $ref: "#/components/schemas/NodeSharePermission"
+        groupRoles:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ResourceRole"
+          description: "The strongest role each group holds, keyed by group identifier."
+        id:
+          type: string
+          format: uri
+        userRoles:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ResourceRole"
+          description: "The strongest role each user holds, keyed by user identifier."
+    MySqlDatabase:
+      type: object
+      additionalProperties: false
+      description: "One schema, with its tables and their totals."
+      properties:
+        dataBytes:
+          type: integer
+          format: int64
+        freeBytes:
+          type: integer
+          format: int64
+        indexBytes:
+          type: integer
+          format: int64
+        name:
+          type: string
+        rowsApproximate:
+          type: integer
+          format: int64
+        rowsExact:
+          type: integer
+          format: int64
+          description: Null unless at least one table in the schema was counted exactly.
+          nullable: true
+        source:
+          type: string
+          description: Which datasource reached the schema first. Two datasources
+            on one host can see the same schema.
+        tableCount:
+          type: integer
+          format: int32
+        tables:
+          type: array
+          description: "Every base table, largest first."
+          items:
+            $ref: "#/components/schemas/MySqlTable"
+        totalBytes:
+          type: integer
+          format: int64
+    MySqlReport:
+      type: object
+      additionalProperties: false
+      description: |
+        Every table in every MySQL schema CEDAR's configured datasources can see, with its row count
+        and the space it occupies.
+      properties:
+        databases:
+          type: array
+          description: "One entry per schema reached, sorted by name."
+          items:
+            $ref: "#/components/schemas/MySqlDatabase"
+        exactCounts:
+          type: boolean
+          description: Whether rows were counted rather than estimated.
+        sources:
+          type: array
+          description: "One entry per configured datasource, whether or not it answered."
+          items:
+            $ref: "#/components/schemas/MySqlSource"
+    MySqlSource:
+      type: object
+      additionalProperties: false
+      description: |
+        One configured datasource and what it reached. An unreachable database is reported here
+        rather than thrown, because which parts of CEDAR are answering is the point of the report.
+      properties:
+        configKey:
+          type: string
+          description: The datasource's key in cedar-main.yml.
+          enum:
+          - dbLogging
+          - messagingServer
+        configured:
+          type: boolean
+        error:
+          type: string
+          description: "What the connection or the query reported, where one failed."
+          nullable: true
+        id:
+          type: string
+          enum:
+          - log
+          - messaging
+        reachable:
+          type: boolean
+        schema:
+          type: string
+          description: The schema named in that URL.
+          nullable: true
+        schemas:
+          type: array
+          description: "The schemas this connection's user could see, in the order\
+            \ they were read."
+          items:
+            type: string
+        server:
+          type: string
+          description: The host and port the JDBC URL points at. Absent where the
+            datasource is not configured.
+    MySqlTable:
+      type: object
+      additionalProperties: false
+      description: "One table, as information_schema describes it."
+      properties:
+        averageRowBytes:
+          type: integer
+          format: int64
+          nullable: true
+        countError:
+          type: string
+          description: "Why the exact count is missing, where it was asked for and\
+            \ failed."
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        dataBytes:
+          type: integer
+          format: int64
+        engine:
+          type: string
+          nullable: true
+        freeBytes:
+          type: integer
+          format: int64
+          description: |
+            Pages the table has released without returning them to the filesystem. A large value
+            beside a small row count is a table that was emptied and never rebuilt.
+        indexBytes:
+          type: integer
+          format: int64
+        name:
+          type: string
+        rowsApproximate:
+          type: integer
+          format: int64
+          description: |
+            The optimizer's estimate, which for InnoDB comes from sampling and can be far out. Null
+            where the optimizer holds no statistics for the table, which is not the same fact as an
+            empty table.
+          nullable: true
+        rowsExact:
+          type: integer
+          format: int64
+          description: "The counted rows. Null unless exact counting was asked for,\
+            \ and null where that count failed."
+          nullable: true
+        totalBytes:
+          type: integer
+          format: int64
+          description: Data and indexes together.
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+    NodeSharePermission:
+      type: string
+      description: What everybody may do with the resource. Null where nothing is
+        shared with everybody.
+      enum:
+      - read
+      - write
+      - null
+      nullable: true
+    QueryResult:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnMeta"
+        elapsedMs:
+          type: integer
+          format: int64
+        exact:
+          type: boolean
+        nextCursor:
+          type: string
+        notes:
+          type: array
+          items:
+            type: string
+        rowCount:
+          type: integer
+          format: int32
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: object
+        source:
+          type: string
+        truncated:
+          type: boolean
+    QueueDepths:
+      type: object
+      additionalProperties: false
+      description: |
+        How many items wait in each of CEDAR's Redis queues. A queue that keeps growing is the sign
+        that whatever drains it has stopped.
+      properties:
+        appLog:
+          type: integer
+          format: int64
+        cloneInstances:
+          type: integer
+          format: int64
+        ncbiSubmission:
+          type: integer
+          format: int64
+        searchPermission:
+          type: integer
+          format: int64
+        valuerecommender:
+          type: integer
+          format: int64
+    RepositoryState:
+      type: object
+      additionalProperties: false
+      description: |
+        One repository's git state. Every field but the name is null where the repository could not
+        be read, and `error` then says why.
+      properties:
+        ahead:
+          type: integer
+          format: int32
+          nullable: true
+        behind:
+          type: integer
+          format: int32
+          nullable: true
+        branch:
+          type: string
+          description: "The checked-out branch, or `(detached)` where HEAD is not\
+            \ on one."
+          nullable: true
+        commit:
+          type: string
+          description: The full commit SHA at HEAD.
+          nullable: true
+        committedAt:
+          type: string
+          format: date-time
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        repository:
+          type: string
+          description: The directory name under CEDAR_HOME.
+        uncommittedFiles:
+          type: integer
+          format: int32
+          description: How many tracked files differ from HEAD. Non-zero is a hot-patch
+            applied on the box.
+          nullable: true
+        upstream:
+          type: string
+          nullable: true
+    RequestRow:
+      type: object
+      properties:
+        apiKeyHash:
+          type: string
+        authSource:
+          type: string
+        component:
+          type: string
+        durationNanos:
+          type: integer
+          format: int64
+        errorPack:
+          type: string
+        globalRequestId:
+          type: string
+        handler:
+          type: string
+        httpMethod:
+          type: string
+        path:
+          type: string
+        requestTime:
+          type: string
+        status:
+          type: integer
+          format: int32
+        userId:
+          type: string
+    ResourceGroupGrant:
+      type: object
+      description: One role granted to one group on a folder or artifact.
+      properties:
+        group:
+          $ref: "#/components/schemas/CedarGroupReference"
+        role:
+          $ref: "#/components/schemas/ResourceRole"
+      required:
+      - group
+      - role
+    ResourceIdLookup:
+      type: object
+      additionalProperties: false
+      description: |
+        What the input resolved to, and how it was arrived at. A string that resolves to nothing is
+        reported here with `success` false rather than as a failed request.
+      properties:
+        errorPhase:
+          type: string
+          description: |
+            The last parsing step that failed. Present only on an unsuccessful lookup: a step that
+            failed before a later one succeeded leaves no trace here.
+          enum:
+          - pathParsing
+          - paramParsing
+          - inputParsing
+          - parameterParsing
+        exceptionMessage:
+          type: string
+          description: "What the failing parse reported, where one threw."
+        request:
+          type: object
+          additionalProperties: false
+          description: "The input as received, and what could be parsed out of it."
+          properties:
+            input:
+              type: string
+              description: The query parameter exactly as it arrived.
+              nullable: true
+            path:
+              type: string
+              description: "The path, where the input parsed as a URL."
+            queryParameters:
+              type: array
+              description: "The query string parsed into name and value pairs, where\
+                \ the input parsed as a URI."
+              items:
+                type: object
+                additionalProperties: true
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: string
+                    nullable: true
+            queryString:
+              type: string
+              description: That URL's query string.
+              nullable: true
+            sanitizedInput:
+              type: string
+              description: The input with leading and trailing space removed. Empty
+                where none arrived.
+        resourceId:
+          $ref: "#/components/schemas/ResourceIdReference"
+        resourceIdSource:
+          type: string
+          description: Which part of the input the identifier was recognized in. Absent
+            where nothing resolved.
+          enum:
+          - path
+          - inputString
+          - queryString
+        resourceIdString:
+          type: string
+          description: "The identifier in full, or empty where nothing resolved."
+        stackTrace:
+          type: array
+          description: Where that parse threw.
+          items:
+            $ref: "#/components/schemas/StackTraceFrame"
+        success:
+          type: boolean
+          description: Whether the input resolved to an artifact identifier.
+      required:
+      - request
+      - resourceIdString
+      - success
+    ResourceIdReference:
+      type: object
+      additionalProperties: false
+      description: An artifact identifier taken apart into the pieces it is built
+        from.
+      nullable: true
+      properties:
+        protocol:
+          type: string
+        serverName:
+          type: string
+        type:
+          type: string
+          enum:
+          - folder
+          - field
+          - element
+          - template
+          - element-instance
+          - instance
+          - user
+          - group
+          - category
+          - message
+          - user-message
+          - process-type
+        uuid:
+          type: string
+    ResourcePermissions:
+      type: object
+      description: "The owner of a folder or artifact, together with the user and\
+        \ group grants recorded directly on it. A role that reaches the resource through\
+        \ a folder above it is not listed here."
+      properties:
+        groupPermissions:
+          type: array
+          description: Every role granted directly to a group.
+          items:
+            $ref: "#/components/schemas/ResourceGroupGrant"
+        owner:
+          $ref: "#/components/schemas/CedarUserReference"
+        userPermissions:
+          type: array
+          description: Every role granted directly to a user.
+          items:
+            $ref: "#/components/schemas/ResourceUserGrant"
+      required:
+      - groupPermissions
+      - owner
+      - userPermissions
+    ResourceRole:
+      type: string
+      description: A role granted to a user or a group on an artifact or a folder.
+        Each role includes everything the weaker roles allow.
+      enum:
+      - viewer
+      - editor
+      - manager
+    ResourceUserGrant:
+      type: object
+      description: One role granted to one user on a folder or artifact.
+      properties:
+        role:
+          $ref: "#/components/schemas/ResourceRole"
+        user:
+          $ref: "#/components/schemas/CedarUserReference"
+      required:
+      - role
+      - user
+    SearchIndexCounts:
+      type: object
+      additionalProperties: false
+      description: |
+        What the search index holds. Read alongside the workspace graph's counts: the two
+        disagreeing is how a half-finished reindex shows itself.
+      properties:
+        opensearch:
+          type: object
+          additionalProperties: false
+          properties:
+            artifactTotal:
+              type: integer
+              format: int64
+              description: "Every artifact document, whatever its type."
+            element:
+              type: integer
+              format: int64
+            field:
+              type: integer
+              format: int64
+            folder:
+              type: integer
+              format: int64
+            instance:
+              type: integer
+              format: int64
+            recommenderTotal:
+              type: integer
+              format: int64
+              description: Every document in the value recommender's own index.
+            template:
+              type: integer
+              format: int64
+    SearchIndexDocument:
+      type: object
+      additionalProperties: true
+      description: |
+        The OpenSearch document for the resource, as the index holds it. Null where the index has no
+        document, and null as well where OpenSearch could not be read: the failure is logged rather
+        than returned, so the two cases look alike here.
+      nullable: true
+    ServerBuildReport:
+      type: object
+      additionalProperties: false
+      description: |
+        The version the named server's environment declares, beside the artifact its JVM loaded. A
+        server reporting the release version from an artifact older than the release was pulled and
+        not rebuilt.
+      properties:
+        application:
+          type: string
+        artifactBuiltAt:
+          type: string
+          format: date-time
+          nullable: true
+        artifactError:
+          type: string
+          description: "Why the artifact could not be located, where it could not\
+            \ be."
+        artifactPath:
+          type: string
+          description: Where the server's own code was loaded from. Null where the
+            class loader has no code source.
+          nullable: true
+        artifactSizeBytes:
+          type: integer
+          format: int64
+          description: "Present for a jar, absent for a class directory."
+        artifactType:
+          type: string
+          description: Whether that is a packaged jar or a build tree's class directory.
+          enum:
+          - jar
+          - classes
+        host:
+          type: string
+          nullable: true
+        implementationVersion:
+          type: string
+          description: "Implementation-Version from the manifest, where the artifact\
+            \ carries one."
+          nullable: true
+        java.vendor:
+          type: string
+        java.version:
+          type: string
+        jvm.name:
+          type: string
+        pid:
+          type: integer
+          format: int64
+        server:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        uptimeMs:
+          type: integer
+          format: int64
+        version:
+          type: string
+          nullable: true
+        versionModifier:
+          type: string
+          nullable: true
+    ServerConfigurationReport:
+      type: object
+      additionalProperties: false
+      description: cedar-main.yml as the named server resolved it.
+      properties:
+        application:
+          type: string
+        configuration:
+          type: object
+          additionalProperties: true
+          description: |
+            The configuration template with this server's environment substituted into it, masked by
+            key name and by value. A placeholder that could not be resolved is left as the literal
+            ${NAME} rather than blanked, because that is the finding.
+        server:
+          type: string
+    ServerEnvironmentReport:
+      type: object
+      additionalProperties: false
+      description: The environment variables the named server resolved its configuration
+        from.
+      properties:
+        application:
+          type: string
+          description: The server's display name.
+        component:
+          type: string
+          description: The configuration model's name for the server.
+          nullable: true
+        server:
+          type: string
+          description: The server's name as the configuration spells it.
+        variables:
+          type: array
+          description: "One entry per CEDAR variable, declared or not."
+          items:
+            $ref: "#/components/schemas/EnvironmentVariableEntry"
+    ServerJvmReport:
+      type: object
+      additionalProperties:
+        type: integer
+        format: int64
+        description: |
+          One entry per garbage collector the JVM registered, named as that collector names itself
+          and holding the collections it has run. Which collectors appear depends on the JVM.
+      description: |
+        What the named server's JVM is doing: memory, host, threads and garbage collection. Thread
+        stack traces are not included; the server serves the full dump on its own route.
+      properties:
+        current-thread.cpu-time:
+          type: integer
+          format: int64
+        current-thread.user-time:
+          type: integer
+          format: int64
+        jvm.memory.heap.committed:
+          type: integer
+          format: int64
+        jvm.memory.heap.init:
+          type: integer
+          format: int64
+        jvm.memory.heap.max:
+          type: integer
+          format: int64
+        jvm.memory.heap.used:
+          type: integer
+          format: int64
+        jvm.memory.non-heap.committed:
+          type: integer
+          format: int64
+        jvm.memory.non-heap.init:
+          type: integer
+          format: int64
+        jvm.memory.non-heap.max:
+          type: integer
+          format: int64
+        jvm.memory.non-heap.used:
+          type: integer
+          format: int64
+        jvm.runtime.memory.free:
+          type: integer
+          format: int64
+        jvm.runtime.memory.max:
+          type: integer
+          format: int64
+        jvm.runtime.memory.total:
+          type: integer
+          format: int64
+        os.architecture:
+          type: string
+        os.available-processors:
+          type: integer
+          format: int32
+        os.load-average:
+          type: number
+          format: double
+          description: "The host's one-minute load average, or a negative number where\
+            \ the platform does not report it."
+        os.name:
+          type: string
+        os.version:
+          type: string
+        thread.count:
+          type: integer
+          format: int32
+        thread.daemon.count:
+          type: integer
+          format: int32
+        thread.started.count:
+          type: integer
+          format: int64
     Sort:
       type: object
       properties:
@@ -1449,6 +3454,436 @@ components:
           type: string
         key:
           type: string
+    StackTraceFrame:
+      type: object
+      additionalProperties: true
+      description: "One frame of a Java stack trace, as the JVM reports it."
+      properties:
+        className:
+          type: string
+        fileName:
+          type: string
+          nullable: true
+        lineNumber:
+          type: integer
+          format: int32
+        methodName:
+          type: string
+        nativeMethod:
+          type: boolean
+    StoreCounts:
+      type: object
+      additionalProperties: false
+      description: |
+        What each store holds, counted store by store so the figures can be read against each other.
+        The workspace graph is the authoritative count.
+      properties:
+        errorPack:
+          type: string
+          description: "What went wrong reading Keycloak, where it could not be read."
+        keycloak:
+          type: object
+          additionalProperties: false
+          description: The identity provider. Empty where Keycloak could not be read.
+          properties:
+            user:
+              type: integer
+              format: int32
+        mongo:
+          type: object
+          additionalProperties: false
+          description: "The artifact store, which holds no folders."
+          properties:
+            element:
+              type: integer
+              format: int64
+            field:
+              type: integer
+              format: int64
+            instance:
+              type: integer
+              format: int64
+            template:
+              type: integer
+              format: int64
+        neo4j:
+          type: object
+          additionalProperties: false
+          description: The workspace graph.
+          properties:
+            category:
+              type: integer
+              format: int64
+            element:
+              type: integer
+              format: int64
+            field:
+              type: integer
+              format: int64
+            folder:
+              type: integer
+              format: int64
+            group:
+              type: integer
+              format: int64
+            instance:
+              type: integer
+              format: int64
+            template:
+              type: integer
+              format: int64
+            user:
+              type: integer
+              format: int64
+        opensearch:
+          allOf:
+          - $ref: "#/components/schemas/ArtifactCountsByType"
+          description: The search index.
+    TableCoverage:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnInfo"
+        newest:
+          type: string
+        oldest:
+          type: string
+        rowCount:
+          type: integer
+          format: int64
+        sqlTable:
+          type: string
+        table:
+          type: string
+    TimeBucket:
+      type: object
+      additionalProperties: false
+      description: One hour of the request volume series.
+      properties:
+        errorCount:
+          type: integer
+          format: int64
+        hourUtc:
+          type: string
+          description: "The hour this bucket covers, as a UTC instant on the hour."
+        reqCount:
+          type: integer
+          format: int64
+    TraceResult:
+      type: object
+      properties:
+        componentCount:
+          type: integer
+          format: int32
+        cypherCount:
+          type: integer
+          format: int32
+        dbMs:
+          type: number
+          format: double
+        dbSharePct:
+          type: number
+          format: double
+        elapsedMs:
+          type: integer
+          format: int64
+        globalRequestId:
+          type: string
+        handlerMs:
+          type: number
+          format: double
+        notes:
+          type: array
+          items:
+            type: string
+        requestCount:
+          type: integer
+          format: int32
+        spanMs:
+          type: number
+          format: double
+        spans:
+          type: array
+          items:
+            $ref: "#/components/schemas/TraceSpan"
+        truncated:
+          type: boolean
+    TraceSpan:
+      type: object
+      properties:
+        component:
+          type: string
+        detail:
+          type: string
+        durationMs:
+          type: number
+          format: double
+        kind:
+          type: string
+        label:
+          type: string
+        localRequestId:
+          type: string
+        offsetMs:
+          type: integer
+          format: int64
+        startedAt:
+          type: string
+        status:
+          type: integer
+          format: int32
+    UnmodelledEnvironmentReport:
+      type: object
+      additionalProperties: false
+      description: |
+        CEDAR_* variables this host sets that the configuration model does not define. Names only:
+        a variable outside the model carries no secrecy flag, so its value is withheld.
+      properties:
+        count:
+          type: integer
+          format: int32
+        note:
+          type: string
+          description: "How to read the list, and why a name on it is not by itself\
+            \ an unused variable."
+        scope:
+          type: string
+          description: Which host the names were read from.
+        variables:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: false
+            properties:
+              hasValue:
+                type: boolean
+                description: Whether the host sets the variable to something other
+                  than the empty string.
+          description: "One entry per unmodelled name, sorted by name."
+    UsageTotals:
+      type: object
+      additionalProperties: false
+      description: |
+        Request volume and latency across a whole range. The percentiles are computed from the merged
+        latency histogram of every covered hour, not averaged from per-hour percentiles. Every field
+        is zero where no hour in the range holds a row.
+      properties:
+        errorCount:
+          type: integer
+          format: int64
+        p50Nanos:
+          type: integer
+          format: int64
+        p95Nanos:
+          type: integer
+          format: int64
+        p99Nanos:
+          type: integer
+          format: int64
+        reqCount:
+          type: integer
+          format: int64
+    UserDiagnosticReport:
+      type: object
+      additionalProperties: false
+      description: |
+        What each store holds about one user. Empty where the user store does not know the
+        identifier, since the stored profile is what the other sections are gathered from.
+      properties:
+        cedarUser:
+          type: object
+          additionalProperties: true
+          description: |
+            The stored user profile: identity, home folder, roles, permissions, API keys, UI
+            preferences and the authentication source behind the account.
+        keycloak:
+          type: object
+          additionalProperties: false
+          properties:
+            user:
+              type: object
+              additionalProperties: true
+              description: |
+                The Keycloak account behind the user, as Keycloak represents it, with its effective
+                realm roles filled in. Null where Keycloak could not be read.
+              nullable: true
+        neo4j:
+          type: object
+          additionalProperties: false
+          properties:
+            extra:
+              type: object
+              additionalProperties: false
+              description: What the graph answers about the user rather than stores
+                about them.
+              properties:
+                accessibleCount:
+                  allOf:
+                  - $ref: "#/components/schemas/UserResourceCounts"
+                  description: "How much of each type the user may reach, counted\
+                    \ in the graph."
+                groupsWithAdministrator:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/CedarGroupReference"
+                groupsWithMembership:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/CedarGroupReference"
+            user:
+              allOf:
+              - $ref: "#/components/schemas/WorkspaceResourceRecord"
+              description: The graph's record of the user.
+        opensearch:
+          type: object
+          additionalProperties: false
+          description: |
+            How much of each type the search index will return for the user at each role. A count of
+            -1 means OpenSearch could not be read; the failure is logged rather than returned. Read
+            against the graph's own count: the two disagreeing is how a stale permission index shows
+            itself.
+          properties:
+            editorCount:
+              $ref: "#/components/schemas/UserResourceCounts"
+            managerCount:
+              $ref: "#/components/schemas/UserResourceCounts"
+            viewerCount:
+              $ref: "#/components/schemas/UserResourceCounts"
+        resourceType:
+          type: string
+          enum:
+          - user
+    UserResourceCounts:
+      type: object
+      additionalProperties: false
+      description: One count per artifact type. Template instances are counted under
+        `templateInstance`.
+      properties:
+        element:
+          type: integer
+          format: int64
+        field:
+          type: integer
+          format: int64
+        folder:
+          type: integer
+          format: int64
+        template:
+          type: integer
+          format: int64
+        templateInstance:
+          type: integer
+          format: int64
+    UserStat:
+      type: object
+      properties:
+        apiKeyHash:
+          type: string
+        authSource:
+          type: string
+        errorCount:
+          type: integer
+          format: int64
+        reqCount:
+          type: integer
+          format: int64
+        userId:
+          type: string
+    WorkerLagReport:
+      type: object
+      additionalProperties: false
+      description: |
+        The depth of the application log queue beside the age of the newest row the worker wrote.
+        Reported together because neither number means anything alone.
+      properties:
+        appLogQueueDepth:
+          type: integer
+          format: int64
+        laggingAfterSeconds:
+          type: integer
+          format: int64
+          description: The lag above which the pipeline counts as behind.
+        observedAt:
+          type: string
+          format: date-time
+        stalledAfterSeconds:
+          type: integer
+          format: int64
+          description: The lag above which nothing is taken to be draining.
+        status:
+          type: string
+          description: The verdict the depth and the lag imply. UNKNOWN where nothing
+            has been written at all.
+          enum:
+          - OK
+          - LAGGING
+          - STALLED
+          - UNKNOWN
+        tables:
+          type: array
+          items:
+            $ref: "#/components/schemas/LogTableFreshness"
+        worstLagSeconds:
+          type: integer
+          format: int64
+          description: "The largest lag across the tables, or null where every table\
+            \ is empty."
+          nullable: true
+    WorkspaceResourceRecord:
+      type: object
+      additionalProperties: true
+      description: |
+        One node as the workspace graph holds it. The identity, naming and provenance keys below are
+        carried by every kind of node; a folder, an artifact, a group and a user each add their own,
+        so the object is left open.
+      properties:
+        '@context':
+          type: object
+          additionalProperties:
+            type: string
+        '@id':
+          type: string
+          format: uri
+        createdOnTS:
+          type: integer
+          format: int64
+          nullable: true
+        lastUpdatedOnTS:
+          type: integer
+          format: int64
+          nullable: true
+        oslc:modifiedBy:
+          type: string
+          format: uri
+          nullable: true
+        pav:createdBy:
+          type: string
+          format: uri
+          nullable: true
+        pav:createdOn:
+          type: string
+          format: date-time
+          nullable: true
+        pav:lastUpdatedOn:
+          type: string
+          format: date-time
+          nullable: true
+        resourceType:
+          type: string
+        schema:description:
+          type: string
+          nullable: true
+        schema:identifier:
+          type: string
+          nullable: true
+        schema:name:
+          type: string
+          nullable: true
+        sourceHash:
+          type: string
+          nullable: true
   securitySchemes:
     api_key:
       description: "Your CEDAR API key, using the format 'apiKey <yourApiKey>'"

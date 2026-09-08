@@ -11,7 +11,15 @@ class OpenApiErrorContractTest {
   @Test
   void errorResponsesPublishTheCommonSchema() throws IOException {
     try (InputStream input = getClass().getResourceAsStream("/assets/swagger-api/swagger.json")) {
-      OpenApiErrorContract.assertDocumented(input, "GET /health-check/{server} 500");
+      OpenApiErrorContract.assertDocumented(input,
+          "GET /health-check/{server} 500",
+          // The log query routes build their own bad-request body rather than the shared envelope.
+          // LogQueryResource.badRequest answers Map.of("error", message), which the document names
+          // as LogQueryError. Listed here so the divergence is recorded rather than papered over.
+          "POST /logs/query 400",
+          "GET /logs/facets/{column} 400",
+          "GET /logs/trace/{globalRequestId} 400",
+          "GET /logs/db-share 400");
     }
   }
 }

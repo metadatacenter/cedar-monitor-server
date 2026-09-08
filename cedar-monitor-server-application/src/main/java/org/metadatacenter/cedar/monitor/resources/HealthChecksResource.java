@@ -50,7 +50,8 @@ public class HealthChecksResource extends AbstractMonitorResource {
           + "server's own, so a 500 here can mean that server is unhealthy rather than that this "
           + "one failed.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "The named server's health check, as it reported it"),
+      @ApiResponse(responseCode = "200", description = "The named server's health check, as it reported it",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/HealthCheckReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No CEDAR server answers to this name"),

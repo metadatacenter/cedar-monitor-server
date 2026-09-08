@@ -116,7 +116,8 @@ public class MySqlCountsResource extends AbstractMonitorResource {
           "the optimizer's estimate unless exact=true is asked for, which counts the rows instead " +
           "and can take a while over the log tables.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "A per-table report for each reachable database"),
+      @ApiResponse(responseCode = "200", description = "A per-table report for each reachable database",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/MySqlReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")

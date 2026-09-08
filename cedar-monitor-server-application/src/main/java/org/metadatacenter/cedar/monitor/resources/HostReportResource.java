@@ -65,7 +65,8 @@ public class HostReportResource extends AbstractMonitorResource {
           + "each repository under CEDAR_HOME. A non-zero uncommitted count is a hot-patch applied "
           + "directly on the box, which the next pull would overwrite.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "One entry per repository"),
+      @ApiResponse(responseCode = "200", description = "One entry per repository",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/HostGitReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission")
   })
@@ -88,7 +89,8 @@ public class HostReportResource extends AbstractMonitorResource {
           + "CEDAR_HOME/log with their sizes and ages. A large file that is still being written to is a "
           + "log nothing is rotating.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Filesystem usage and log file sizes"),
+      @ApiResponse(responseCode = "200", description = "Filesystem usage and log file sizes",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/HostDiskReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission")
   })

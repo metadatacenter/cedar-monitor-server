@@ -2,6 +2,15 @@ package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
 import io.dropwizard.hibernate.UnitOfWork;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -16,9 +25,15 @@ import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.logging.dao.query.LogQueryDAO;
 import org.metadatacenter.server.logging.query.LogBoards;
+import org.metadatacenter.server.logging.query.LogBoards.Board;
 import org.metadatacenter.server.logging.query.LogQueryColumns;
+import org.metadatacenter.server.logging.query.LogQueryResults.CoverageResult;
+import org.metadatacenter.server.logging.query.LogQueryResults.FacetResult;
+import org.metadatacenter.server.logging.query.LogQueryResults.QueryResult;
+import org.metadatacenter.server.logging.query.LogQueryResults.TraceResult;
 import org.metadatacenter.server.logging.query.LogQuerySpec;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
+import org.metadatacenter.util.http.CedarError;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -37,6 +52,8 @@ import java.util.Map;
  */
 @Path("/logs")
 @Produces(MediaType.APPLICATION_JSON)
+@Tag(name = "Log query")
+@SecurityRequirement(name = "api_key")
 public class LogQueryResource extends AbstractMonitorResource {
 
   private static final Duration DEFAULT_FACET_SPAN = Duration.ofHours(24);
@@ -60,7 +77,31 @@ public class LogQueryResource extends AbstractMonitorResource {
   @Path("/query")
   @Consumes(MediaType.APPLICATION_JSON)
   @UnitOfWork
-  public Response query(LogQuerySpec spec) throws CedarException {
+  @Operation(summary = "Run a structured query over the log tables",
+      description = "The one query surface the Explorer, the pivot view and every Insight board are built "
+          + "on. The body is a structured spec rather than SQL text: column names are resolved against an "
+          + "allowlist and values are bound, so a spec naming a column the engine does not know is rejected "
+          + "rather than run. An empty `groupBy` returns raw rows newest first, paged by the cursor the "
+          + "previous result handed back; a non-empty one returns an aggregate. The result carries its own "
+          + "provenance, so a caller can tell an exact answer from a histogram-approximate one and a "
+          + "complete result from a capped one. It is POST rather than GET because a spec with several "
+          + "filters and a metric list outgrows a URL. Requires the monitor read permission.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "The columns, the rows and the result's provenance",
+          content = @Content(schema = @Schema(implementation = QueryResult.class))),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(ref = "#/components/schemas/LogQueryError")),
+          description = "The spec named an unknown table, column, metric or operator, or its cursor could not be read"),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
+  })
+  public Response query(
+      @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+          description = "The query to run. Every field is optional and is normalized before use: `table` "
+              + "defaults to the request log, `source` selects the raw log tables or the hourly rollups, and "
+              + "`limit` is capped by the engine.",
+          content = @Content(schema = @Schema(implementation = LogQuerySpec.class)))
+      LogQuerySpec spec) throws CedarException {
     authorize(buildRequestContext());
     try {
       return Response.ok().entity(dao.query(spec)).build();
@@ -74,10 +115,29 @@ public class LogQueryResource extends AbstractMonitorResource {
   @Timed
   @Path("/facets/{column}")
   @UnitOfWork
-  public Response facet(@PathParam("column") String column,
-                        @QueryParam("table") String table,
-                        @QueryParam("from") String from,
-                        @QueryParam("to") String to) throws CedarException {
+  @Operation(summary = "List the distinct values of one column, with their counts",
+      description = "What a filter dropdown needs: every value the column took over the range, most frequent "
+          + "first, with how often each occurred. Only columns the engine marks facetable can be asked for. "
+          + "The result says whether the value list was capped. Requires the monitor read permission.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "The column's distinct values and their counts",
+          content = @Content(schema = @Schema(implementation = FacetResult.class))),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(ref = "#/components/schemas/LogQueryError")),
+          description = "The table or column is not known or not facetable, a bound was not an ISO-8601 instant, or `from` was not before `to`"),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
+  })
+  public Response facet(
+      @Parameter(description = "The column to enumerate, named as the coverage route names it.", required = true)
+      @PathParam("column") String column,
+      @Parameter(description = "Which log table to read. Defaults to the request log.")
+      @QueryParam("table") String table,
+      @Parameter(description = "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults to 24 hours "
+          + "before the upper bound.")
+      @QueryParam("from") String from,
+      @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
+      @QueryParam("to") String to) throws CedarException {
     authorize(buildRequestContext());
     try {
       Instant toI = to == null ? Instant.now() : Instant.parse(to);
@@ -104,6 +164,19 @@ public class LogQueryResource extends AbstractMonitorResource {
   @Timed
   @Path("/coverage")
   @UnitOfWork
+  @Operation(summary = "Describe what is queryable and what is actually present",
+      description = "Per log table: the columns a query may name, which of them can be grouped and which "
+          + "aggregated, and the rows and time window the table actually holds. Some columns were added "
+          + "after logging began and so carry values only for recent rows; the notes on a column say so. "
+          + "A client reads this to state its own caveats rather than showing a column that looks broken. "
+          + "Requires the monitor read permission.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "The queryable surface and the data behind it",
+          content = @Content(schema = @Schema(implementation = CoverageResult.class))),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
+  })
   public Response coverage() throws CedarException {
     authorize(buildRequestContext());
     return Response.ok().entity(dao.coverage()).build();
@@ -121,8 +194,29 @@ public class LogQueryResource extends AbstractMonitorResource {
   @Timed
   @Path("/trace/{globalRequestId}")
   @UnitOfWork
-  public Response trace(@PathParam("globalRequestId") String globalRequestId,
-                        @QueryParam("maxSpans") Integer maxSpans) throws CedarException {
+  @Operation(summary = "Resolve one global request identifier into a distributed trace",
+      description = "One browser request fans out across microservices, so the identifier appears on several "
+          + "rows, and that fan-out is what this route shows. It returns one span per component that handled "
+          + "the request and one per Cypher statement underneath it, on a shared timeline, with the summed "
+          + "handler time, the summed database time and the share the second is of the first. A handler that "
+          + "is slow with a low share is slow for reasons other than the database. Spans overlap, so the "
+          + "summed times are not wall time; `spanMs` is. Requires the monitor read permission.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "The spans of the request and their cross-table totals",
+          content = @Content(schema = @Schema(implementation = TraceResult.class))),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(ref = "#/components/schemas/LogQueryError")),
+          description = "The identifier was blank"),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
+  })
+  public Response trace(
+      @Parameter(description = "The global request identifier to resolve. An identifier no log row carries "
+          + "answers 200 with no spans.", required = true)
+      @PathParam("globalRequestId") String globalRequestId,
+      @Parameter(description = "How many spans to return per log table. Defaults to 500 and is capped at "
+          + "2000. Passing the cap is how a pathological request stays cheap to look at.")
+      @QueryParam("maxSpans") Integer maxSpans) throws CedarException {
     authorize(buildRequestContext());
     try {
       int cap = (maxSpans == null || maxSpans <= 0) ? DEFAULT_MAX_SPANS : Math.min(maxSpans, MAX_SPANS);
@@ -142,9 +236,29 @@ public class LogQueryResource extends AbstractMonitorResource {
   @Timed
   @Path("/db-share")
   @UnitOfWork
-  public Response dbShare(@QueryParam("from") String from,
-                          @QueryParam("to") String to,
-                          @QueryParam("limit") Integer limit) throws CedarException {
+  @Operation(summary = "Compare each handler's total time against the database time underneath it",
+      description = "One row per handler and component over the range, slowest in total first, with the "
+          + "request count, the summed handler time, the summed Cypher time and the share the second is of "
+          + "the first. The answer comes back in the same shape as a structured query, so a client renders "
+          + "it with the same table. It needs a route of its own only because it joins the request log to "
+          + "the Cypher log, which a spec cannot express. Requires the monitor read permission.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "One row per handler, slowest in total first",
+          content = @Content(schema = @Schema(implementation = QueryResult.class))),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(ref = "#/components/schemas/LogQueryError")),
+          description = "A bound was not an ISO-8601 instant, or `from` was not before `to`"),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
+  })
+  public Response dbShare(
+      @Parameter(description = "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults to seven days "
+          + "before the upper bound.")
+      @QueryParam("from") String from,
+      @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
+      @QueryParam("to") String to,
+      @Parameter(description = "How many rows to return. Defaults to 100 and is capped at 500.")
+      @QueryParam("limit") Integer limit) throws CedarException {
     authorize(buildRequestContext());
     try {
       Instant toI = to == null ? Instant.now() : Instant.parse(to);
@@ -171,6 +285,19 @@ public class LogQueryResource extends AbstractMonitorResource {
   @GET
   @Timed
   @Path("/boards")
+  @Operation(summary = "List the predefined Insight boards",
+      description = "The catalogue of predefined questions, each one a saved query spec a client can load "
+          + "into the same controls and edit. The catalogue is served from here so a client's list cannot "
+          + "drift from what the query engine supports. Specs carry no time range: the caller supplies one, "
+          + "and `defaultRangeMinutes` is only a suggested starting window. A few boards join the two log "
+          + "tables and so cannot be a spec; those name a route in `endpoint`, which the caller reads "
+          + "instead of posting `spec`. Requires the monitor read permission.")
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "The board catalogue",
+          content = @Content(array = @ArraySchema(schema = @Schema(implementation = Board.class)))),
+      @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
+      @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission")
+  })
   public Response boards() throws CedarException {
     authorize(buildRequestContext());
     return Response.ok().entity(LogBoards.all()).build();

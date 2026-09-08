@@ -70,7 +70,8 @@ public class ServerReportResource extends AbstractMonitorResource {
           + "secret values masked and undeclared values withheld. Read one server per call; the "
           + "monitoring UI reads all of them in parallel to build the drift matrix.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "The named server's environment report"),
+      @ApiResponse(responseCode = "200", description = "The named server's environment report",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/ServerEnvironmentReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No CEDAR server answers to this name"),
@@ -90,7 +91,8 @@ public class ServerReportResource extends AbstractMonitorResource {
       description = "cedar-main.yml as the named server resolved it, with secrets masked. Placeholders "
           + "that could not be resolved are left as the literal ${NAME}.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "The named server's resolved configuration"),
+      @ApiResponse(responseCode = "200", description = "The named server's resolved configuration",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/ServerConfigurationReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No CEDAR server answers to this name"),
@@ -109,7 +111,8 @@ public class ServerReportResource extends AbstractMonitorResource {
       description = "The version the named server's environment declares, together with the path and "
           + "modification time of the artifact its JVM actually loaded, its uptime and its host.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "The named server's build report"),
+      @ApiResponse(responseCode = "200", description = "The named server's build report",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/ServerBuildReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No CEDAR server answers to this name"),
@@ -129,7 +132,8 @@ public class ServerReportResource extends AbstractMonitorResource {
           + "for the named server. Thread stack traces are deliberately not included: the full dump runs "
           + "to roughly half a megabyte per server and is served by the server's own /insight/thread-details.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "The named server's JVM report"),
+      @ApiResponse(responseCode = "200", description = "The named server's JVM report",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/ServerJvmReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "404", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "No CEDAR server answers to this name"),
