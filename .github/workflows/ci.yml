@@ -212,6 +212,12 @@ jobs:
       - name: Run Maven tests
         run: ./mvnw --batch-mode --no-transfer-progress --update-snapshots test --settings .m2/nexus-settings.xml
 
+      - name: Verify generated OpenAPI is committed
+        run: |
+          git diff --exit-code -- \
+            cedar-monitor-server-application/src/main/resources/assets/swagger-api/swagger.json \
+            cedar-monitor-server-application/src/main/resources/assets/swagger-api/swagger.yaml
+
       # The Docker image for this server fetches its jar from Nexus by GAV, so an
       # unpublished snapshot fails the image build rather than any Maven build.
       # Tests have already run in the step above; this packages and uploads them.
