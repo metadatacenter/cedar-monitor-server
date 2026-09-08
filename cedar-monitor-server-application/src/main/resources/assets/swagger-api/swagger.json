@@ -3030,17 +3030,10 @@
         "description" : "What each store holds about one group. Empty where the workspace graph does not know the\nidentifier, since the graph's record is what the other sections are gathered from.\n",
         "properties" : {
           "groupUsers" : {
-            "type" : "object",
-            "additionalProperties" : false,
-            "description" : "The group's members and administrators.",
-            "properties" : {
-              "users" : {
-                "type" : "array",
-                "items" : {
-                  "$ref" : "#/components/schemas/GroupMemberStanding"
-                }
-              }
-            }
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/GroupMembership"
+            } ],
+            "description" : "The group's members and administrators."
           },
           "neo4j" : {
             "allOf" : [ {
@@ -3079,21 +3072,39 @@
           }
         }
       },
-      "GroupMemberStanding" : {
+      "GroupMember" : {
         "type" : "object",
         "additionalProperties" : true,
-        "description" : "One user's standing in a group, as this service reports it. The group server's own\nmembership schema is the collection its API answers with, and its member schema carries a\ndifferent user reference, so this diagnostic rendering keeps a name of its own rather than\nclaiming to be either.\n",
+        "description" : "One user's place in a group. A member belongs to the group. An administrator may change who belongs to it. The two are recorded independently, so a user may administer a group without belonging to it.",
         "properties" : {
           "administrator" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "description" : "Whether the user may change who belongs to the group."
           },
           "member" : {
-            "type" : "boolean"
+            "type" : "boolean",
+            "description" : "Whether the user belongs to the group."
           },
           "user" : {
             "$ref" : "#/components/schemas/CedarUserReference"
           }
-        }
+        },
+        "required" : [ "administrator", "member", "user" ]
+      },
+      "GroupMembership" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "description" : "Everyone a group names, its members and its administrators together. A membership is always given in full rather than a page at a time, and a write replaces it rather than adding to it.",
+        "properties" : {
+          "users" : {
+            "type" : "array",
+            "description" : "One entry per user the group names.",
+            "items" : {
+              "$ref" : "#/components/schemas/GroupMember"
+            }
+          }
+        },
+        "required" : [ "users" ]
       },
       "Having" : {
         "type" : "object",

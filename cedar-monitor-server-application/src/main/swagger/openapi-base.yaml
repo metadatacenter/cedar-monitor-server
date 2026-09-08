@@ -20,13 +20,13 @@ components:
 
     # ---- shared building blocks -----------------------------------------------------------------
 
-    # These six schemas describe one payload that this service and the resource server both
-    # publish. Its description lives on the annotated types in cedar-core-library, and the resource
-    # server generates the schemas from them. This service nests the payload inside the diagnostic
-    # reports below, whose schemas are hand-written, so no operation here names the Java type and
-    # the generator never reaches it. What follows is a copy of what those annotations produce, and
-    # the estate-wide comparison of schemas that share a name across services fails as soon as the
-    # copy stops matching.
+    # These schemas describe payloads this service shares with the resource and group servers.
+    # Their descriptions live on the annotated types in cedar-core-library, and those services
+    # generate the schemas from them. This service nests the payloads inside the diagnostic reports
+    # below, whose schemas are hand-written, so no operation here names the Java type and the
+    # generator never reaches it. What follows is a copy of what those annotations produce, and the
+    # estate-wide comparison of schemas that share a name across services fails as soon as the copy
+    # stops matching.
     CedarUserReference:
       type: object
       description: >-
@@ -66,6 +66,41 @@ components:
           description: Display name of the group.
       required:
         - '@id'
+    GroupMember:
+      type: object
+      description: >-
+        One user's place in a group. A member belongs to the group. An administrator may change who
+        belongs to it. The two are recorded independently, so a user may administer a group without
+        belonging to it.
+      properties:
+        administrator:
+          type: boolean
+          description: Whether the user may change who belongs to the group.
+        member:
+          type: boolean
+          description: Whether the user belongs to the group.
+        user:
+          $ref: '#/components/schemas/CedarUserReference'
+      required:
+        - administrator
+        - member
+        - user
+      additionalProperties: true
+    GroupMembership:
+      type: object
+      description: >-
+        Everyone a group names, its members and its administrators together. A membership is always
+        given in full rather than a page at a time, and a write replaces it rather than adding to
+        it.
+      properties:
+        users:
+          type: array
+          description: One entry per user the group names.
+          items:
+            $ref: '#/components/schemas/GroupMember'
+      required:
+        - users
+      additionalProperties: false
     ResourceRole:
       type: string
       description: >-
@@ -432,21 +467,6 @@ components:
               $ref: '#/components/schemas/SearchIndexDocument'
           additionalProperties: false
       additionalProperties: false
-    GroupMemberStanding:
-      type: object
-      description: |
-        One user's standing in a group, as this service reports it. The group server's own
-        membership schema is the collection its API answers with, and its member schema carries a
-        different user reference, so this diagnostic rendering keeps a name of its own rather than
-        claiming to be either.
-      properties:
-        user:
-          $ref: '#/components/schemas/CedarUserReference'
-        administrator:
-          type: boolean
-        member:
-          type: boolean
-      additionalProperties: true
     GroupDiagnosticReport:
       type: object
       description: |
@@ -462,14 +482,9 @@ components:
             - $ref: '#/components/schemas/WorkspaceResourceRecord'
           description: The graph's record of the group.
         groupUsers:
-          type: object
+          allOf:
+            - $ref: '#/components/schemas/GroupMembership'
           description: The group's members and administrators.
-          properties:
-            users:
-              type: array
-              items:
-                $ref: '#/components/schemas/GroupMemberStanding'
-          additionalProperties: false
         searchCedarIds:
           type: array
           description: |
