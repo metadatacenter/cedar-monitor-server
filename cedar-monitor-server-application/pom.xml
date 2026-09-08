@@ -201,6 +201,7 @@
         <configuration>
           <resourcePackages>
             <package>org.metadatacenter.cedar.monitor.resources</package>
+            <package>org.metadatacenter.cedar.util.dw</package>
           </resourcePackages>
         </configuration>
       </plugin>
