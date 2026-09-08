@@ -768,7 +768,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/LogQueryError"
+                  "$ref" : "#/components/schemas/CedarError"
                 }
               }
             },
@@ -1159,7 +1159,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/LogQueryError"
+                  "$ref" : "#/components/schemas/CedarError"
                 }
               }
             },
@@ -1233,7 +1233,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/LogQueryError"
+                  "$ref" : "#/components/schemas/CedarError"
                 }
               }
             },
@@ -1313,7 +1313,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/LogQueryError"
+                  "$ref" : "#/components/schemas/CedarError"
                 }
               }
             },
@@ -2896,11 +2896,6 @@
           },
           "operation" : {
             "type" : "object",
-            "additionalProperties" : {
-              "type" : "object",
-              "description" : "Operation that failed. Its fields depend on the operation type.",
-              "nullable" : true
-            },
             "description" : "Operation that failed. Its fields depend on the operation type.",
             "nullable" : true
           },
@@ -3632,18 +3627,6 @@
             "format" : "int64"
           }
         }
-      },
-      "LogQueryError" : {
-        "type" : "object",
-        "additionalProperties" : false,
-        "description" : "The body the log query routes answer a bad request with. It is not the CEDAR error envelope\nevery other route in this service uses: `badRequest` in LogQueryResource builds this one\ndirectly. Documented as it behaves; converging it on the shared envelope would change what\na caller receives.\n",
-        "properties" : {
-          "error" : {
-            "type" : "string",
-            "description" : "What was wrong with the request, in the words the query layer raised."
-          }
-        },
-        "required" : [ "error" ]
       },
       "LogQuerySpec" : {
         "type" : "object",

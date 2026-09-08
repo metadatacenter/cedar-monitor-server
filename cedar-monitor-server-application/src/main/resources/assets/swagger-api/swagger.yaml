@@ -553,7 +553,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LogQueryError"
+                $ref: "#/components/schemas/CedarError"
           description: "A bound was not an ISO-8601 instant, or `from` was not before\
             \ `to`"
         "401":
@@ -844,7 +844,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LogQueryError"
+                $ref: "#/components/schemas/CedarError"
           description: "The table or column is not known or not facetable, a bound\
             \ was not an ISO-8601 instant, or `from` was not before `to`"
         "401":
@@ -903,7 +903,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LogQueryError"
+                $ref: "#/components/schemas/CedarError"
           description: "The spec named an unknown table, column, metric or operator,\
             \ or its cursor could not be read"
         "401":
@@ -967,7 +967,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LogQueryError"
+                $ref: "#/components/schemas/CedarError"
           description: The identifier was blank
         "401":
           content:
@@ -2274,11 +2274,6 @@ components:
           description: Named structured values associated with the error.
         operation:
           type: object
-          additionalProperties:
-            type: object
-            description: Operation that failed. Its fields depend on the operation
-              type.
-            nullable: true
           description: Operation that failed. Its fields depend on the operation type.
           nullable: true
         parameters:
@@ -2884,21 +2879,6 @@ components:
         sizeBytes:
           type: integer
           format: int64
-    LogQueryError:
-      type: object
-      additionalProperties: false
-      description: |
-        The body the log query routes answer a bad request with. It is not the CEDAR error envelope
-        every other route in this service uses: `badRequest` in LogQueryResource builds this one
-        directly. Documented as it behaves; converging it on the shared envelope would change what
-        a caller receives.
-      properties:
-        error:
-          type: string
-          description: "What was wrong with the request, in the words the query layer\
-            \ raised."
-      required:
-      - error
     LogQuerySpec:
       type: object
       properties:

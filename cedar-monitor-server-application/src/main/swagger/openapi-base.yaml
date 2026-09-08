@@ -1460,20 +1460,6 @@ components:
           items:
             $ref: '#/components/schemas/TimeBucket'
       additionalProperties: false
-    LogQueryError:
-      type: object
-      description: |
-        The body the log query routes answer a bad request with. It is not the CEDAR error envelope
-        every other route in this service uses: `badRequest` in LogQueryResource builds this one
-        directly. Documented as it behaves; converging it on the shared envelope would change what
-        a caller receives.
-      required:
-        - error
-      properties:
-        error:
-          type: string
-          description: What was wrong with the request, in the words the query layer raised.
-      additionalProperties: false
   securitySchemes:
     api_key:
       type: apiKey

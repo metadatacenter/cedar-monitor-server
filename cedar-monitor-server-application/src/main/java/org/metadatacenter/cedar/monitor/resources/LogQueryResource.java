@@ -34,6 +34,7 @@ import org.metadatacenter.server.logging.query.LogQueryResults.TraceResult;
 import org.metadatacenter.server.logging.query.LogQuerySpec;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 import org.metadatacenter.util.http.CedarError;
+import org.metadatacenter.util.http.CedarResponse;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -89,7 +90,7 @@ public class LogQueryResource extends AbstractMonitorResource {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The columns, the rows and the result's provenance",
           content = @Content(schema = @Schema(implementation = QueryResult.class))),
-      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(ref = "#/components/schemas/LogQueryError")),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)),
           description = "The spec named an unknown table, column, metric or operator, or its cursor could not be read"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
@@ -122,7 +123,7 @@ public class LogQueryResource extends AbstractMonitorResource {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The column's distinct values and their counts",
           content = @Content(schema = @Schema(implementation = FacetResult.class))),
-      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(ref = "#/components/schemas/LogQueryError")),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)),
           description = "The table or column is not known or not facetable, a bound was not an ISO-8601 instant, or `from` was not before `to`"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
@@ -204,7 +205,7 @@ public class LogQueryResource extends AbstractMonitorResource {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "The spans of the request and their cross-table totals",
           content = @Content(schema = @Schema(implementation = TraceResult.class))),
-      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(ref = "#/components/schemas/LogQueryError")),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)),
           description = "The identifier was blank"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
@@ -245,7 +246,7 @@ public class LogQueryResource extends AbstractMonitorResource {
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "One row per handler, slowest in total first",
           content = @Content(schema = @Schema(implementation = QueryResult.class))),
-      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(ref = "#/components/schemas/LogQueryError")),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)),
           description = "A bound was not an ISO-8601 instant, or `from` was not before `to`"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
@@ -322,8 +323,10 @@ public class LogQueryResource extends AbstractMonitorResource {
 
   /** Spec validation failures are the caller's fault and the message names the offending field. */
   private static Response badRequest(IllegalArgumentException e) {
-    return Response.status(Response.Status.BAD_REQUEST)
-        .entity(Map.of("error", e.getMessage() == null ? "Invalid query spec." : e.getMessage()))
+    String message = e.getMessage() == null ? "Invalid query spec." : e.getMessage();
+    return CedarResponse.badRequest()
+        .errorMessage(message)
+        .extension("error", message)
         .build();
   }
 }
