@@ -16,6 +16,1450 @@ info:
     with it is how a half-finished reindex shows itself.
   version: ${project.version}
 components:
+  schemas:
+
+    # ---- shared building blocks -----------------------------------------------------------------
+
+    # These schemas describe payloads this service shares with the resource and group servers.
+    # Their descriptions live on the annotated types in cedar-core-library, and those services
+    # generate the schemas from them. This service nests the payloads inside the diagnostic reports
+    # below, whose schemas are hand-written, so no operation here names the Java type and the
+    # generator never reaches it. What follows is a copy of what those annotations produce, and the
+    # estate-wide comparison of schemas that share a name across services fails as soon as the copy
+    # stops matching.
+    CedarUserReference:
+      type: object
+      description: >-
+        A reference to a user. It appears wherever a user is named beside something else, as the
+        owner of a resource, the holder of a grant, or a member of a group. The name and email
+        accompany the identifier so a caller need not fetch the user record to display them.
+      properties:
+        '@id':
+          type: string
+          format: uri
+          description: Identifier of the user.
+        email:
+          type: string
+          format: email
+          description: Email address of the user.
+        firstName:
+          type: string
+          description: Given name of the user.
+        lastName:
+          type: string
+          description: Family name of the user.
+      required:
+        - '@id'
+    CedarGroupReference:
+      type: object
+      description: >-
+        A reference to a group. It appears wherever a group is named beside something else, as the
+        holder of a grant or as a group a user belongs to. The name accompanies the identifier so a
+        caller need not fetch the group record to display it.
+      properties:
+        '@id':
+          type: string
+          format: uri
+          description: Identifier of the group.
+        'schema:name':
+          type: string
+          description: Display name of the group.
+      required:
+        - '@id'
+    GroupMember:
+      type: object
+      description: >-
+        One user's place in a group. A member belongs to the group. An administrator may change who
+        belongs to it. The two are recorded independently, so a user may administer a group without
+        belonging to it.
+      properties:
+        administrator:
+          type: boolean
+          description: Whether the user may change who belongs to the group.
+        member:
+          type: boolean
+          description: Whether the user belongs to the group.
+        user:
+          $ref: '#/components/schemas/CedarUserReference'
+      required:
+        - administrator
+        - member
+        - user
+      additionalProperties: true
+    GroupMembership:
+      type: object
+      description: >-
+        Everyone a group names, its members and its administrators together. A membership is always
+        given in full rather than a page at a time, and a write replaces it rather than adding to
+        it.
+      properties:
+        users:
+          type: array
+          description: One entry per user the group names.
+          items:
+            $ref: '#/components/schemas/GroupMember'
+      required:
+        - users
+      additionalProperties: false
+    ResourceRole:
+      type: string
+      description: >-
+        A role granted to a user or a group on an artifact or a folder. Each role includes
+        everything the weaker roles allow.
+      enum:
+        - viewer
+        - editor
+        - manager
+    NodeSharePermission:
+      type: string
+      description: What everybody may do with the resource. Null where nothing is shared with everybody.
+      nullable: true
+      enum:
+        - read
+        - write
+        - null
+    ResourceUserGrant:
+      type: object
+      description: One role granted to one user on a folder or artifact.
+      properties:
+        role:
+          $ref: '#/components/schemas/ResourceRole'
+        user:
+          $ref: '#/components/schemas/CedarUserReference'
+      required:
+        - role
+        - user
+    ResourceGroupGrant:
+      type: object
+      description: One role granted to one group on a folder or artifact.
+      properties:
+        group:
+          $ref: '#/components/schemas/CedarGroupReference'
+        role:
+          $ref: '#/components/schemas/ResourceRole'
+      required:
+        - group
+        - role
+    ResourcePermissions:
+      type: object
+      description: >-
+        The owner of a folder or artifact, together with the user and group grants recorded
+        directly on it. A role that reaches the resource through a folder above it is not listed
+        here.
+      properties:
+        groupPermissions:
+          type: array
+          description: Every role granted directly to a group.
+          items:
+            $ref: '#/components/schemas/ResourceGroupGrant'
+        owner:
+          $ref: '#/components/schemas/CedarUserReference'
+        userPermissions:
+          type: array
+          description: Every role granted directly to a user.
+          items:
+            $ref: '#/components/schemas/ResourceUserGrant'
+      required:
+        - groupPermissions
+        - owner
+        - userPermissions
+    MaterializedPermissions:
+      type: object
+      description: |
+        The grants after inheritance is resolved, which is the form the search index is permitted
+        against. A role here can come from a folder above the resource rather than from a grant on
+        the resource itself, so this and the recorded grants are expected to differ.
+      properties:
+        id:
+          type: string
+          format: uri
+        userRoles:
+          type: object
+          description: The strongest role each user holds, keyed by user identifier.
+          additionalProperties:
+            $ref: '#/components/schemas/ResourceRole'
+        groupRoles:
+          type: object
+          description: The strongest role each group holds, keyed by group identifier.
+          additionalProperties:
+            $ref: '#/components/schemas/ResourceRole'
+        everybodyPermission:
+          $ref: '#/components/schemas/NodeSharePermission'
+      additionalProperties: true
+    WorkspaceResourceRecord:
+      type: object
+      description: |
+        One node as the workspace graph holds it. The identity, naming and provenance keys below are
+        carried by every kind of node; a folder, an artifact, a group and a user each add their own,
+        so the object is left open.
+      properties:
+        '@id':
+          type: string
+          format: uri
+        resourceType:
+          type: string
+        'schema:name':
+          type: string
+          nullable: true
+        'schema:description':
+          type: string
+          nullable: true
+        'schema:identifier':
+          type: string
+          nullable: true
+        'pav:createdOn':
+          type: string
+          format: date-time
+          nullable: true
+        'pav:createdBy':
+          type: string
+          format: uri
+          nullable: true
+        'pav:lastUpdatedOn':
+          type: string
+          format: date-time
+          nullable: true
+        'oslc:modifiedBy':
+          type: string
+          format: uri
+          nullable: true
+        createdOnTS:
+          type: integer
+          format: int64
+          nullable: true
+        lastUpdatedOnTS:
+          type: integer
+          format: int64
+          nullable: true
+        sourceHash:
+          type: string
+          nullable: true
+        '@context':
+          type: object
+          additionalProperties:
+            type: string
+      additionalProperties: true
+    SearchIndexDocument:
+      type: object
+      description: |
+        The OpenSearch document for the resource, as the index holds it. Null where the index has no
+        document, and null as well where OpenSearch could not be read: the failure is logged rather
+        than returned, so the two cases look alike here.
+      nullable: true
+      additionalProperties: true
+    ArtifactCountsByType:
+      type: object
+      description: One count per artifact type.
+      properties:
+        field:
+          type: integer
+          format: int64
+        element:
+          type: integer
+          format: int64
+        template:
+          type: integer
+          format: int64
+        instance:
+          type: integer
+          format: int64
+        folder:
+          type: integer
+          format: int64
+      additionalProperties: false
+
+    # ---- diagnostics ----------------------------------------------------------------------------
+
+    ResourceIdReference:
+      type: object
+      description: An artifact identifier taken apart into the pieces it is built from.
+      nullable: true
+      properties:
+        protocol:
+          type: string
+        serverName:
+          type: string
+        type:
+          type: string
+          enum:
+            - folder
+            - field
+            - element
+            - template
+            - element-instance
+            - instance
+            - user
+            - group
+            - category
+            - message
+            - user-message
+            - process-type
+        uuid:
+          type: string
+      additionalProperties: false
+    StackTraceFrame:
+      type: object
+      description: One frame of a Java stack trace, as the JVM reports it.
+      properties:
+        className:
+          type: string
+        methodName:
+          type: string
+        fileName:
+          type: string
+          nullable: true
+        lineNumber:
+          type: integer
+          format: int32
+        nativeMethod:
+          type: boolean
+      additionalProperties: true
+    ResourceIdLookup:
+      type: object
+      description: |
+        What the input resolved to, and how it was arrived at. A string that resolves to nothing is
+        reported here with `success` false rather than as a failed request.
+      required:
+        - request
+        - resourceIdString
+        - success
+      properties:
+        request:
+          type: object
+          description: The input as received, and what could be parsed out of it.
+          properties:
+            input:
+              type: string
+              nullable: true
+              description: The query parameter exactly as it arrived.
+            sanitizedInput:
+              type: string
+              description: The input with leading and trailing space removed. Empty where none arrived.
+            path:
+              type: string
+              description: The path, where the input parsed as a URL.
+            queryString:
+              type: string
+              nullable: true
+              description: That URL's query string.
+            queryParameters:
+              type: array
+              description: The query string parsed into name and value pairs, where the input parsed as a URI.
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: string
+                    nullable: true
+                additionalProperties: true
+          additionalProperties: false
+        resourceIdSource:
+          type: string
+          description: Which part of the input the identifier was recognized in. Absent where nothing resolved.
+          enum:
+            - path
+            - inputString
+            - queryString
+        resourceId:
+          $ref: '#/components/schemas/ResourceIdReference'
+        resourceIdString:
+          type: string
+          description: The identifier in full, or empty where nothing resolved.
+        success:
+          type: boolean
+          description: Whether the input resolved to an artifact identifier.
+        errorPhase:
+          type: string
+          description: |
+            The last parsing step that failed. Present only on an unsuccessful lookup: a step that
+            failed before a later one succeeded leaves no trace here.
+          enum:
+            - pathParsing
+            - paramParsing
+            - inputParsing
+            - parameterParsing
+        exceptionMessage:
+          type: string
+          description: What the failing parse reported, where one threw.
+        stackTrace:
+          type: array
+          description: Where that parse threw.
+          items:
+            $ref: '#/components/schemas/StackTraceFrame'
+      additionalProperties: false
+    ArtifactDiagnosticReport:
+      type: object
+      description: |
+        What each store holds about one artifact. Empty where the workspace graph does not know the
+        identifier, since the graph's record is what the other sections are gathered from.
+      properties:
+        resourceType:
+          type: string
+          description: The kind the graph recorded for the identifier.
+          enum:
+            - field
+            - element
+            - template
+            - instance
+        neo4j:
+          type: object
+          properties:
+            artifact:
+              allOf:
+                - $ref: '#/components/schemas/WorkspaceResourceRecord'
+              description: The graph's record of the artifact, with its path and parent folder resolved.
+          additionalProperties: false
+        computed:
+          type: object
+          description: What the workspace derives from the graph rather than stores in it.
+          properties:
+            report:
+              type: object
+              description: |
+                The artifact report the workbench reads: the graph record together with the current
+                user's capabilities, the version chain, the categories attached to it and its DOI.
+              additionalProperties: true
+            permissions:
+              $ref: '#/components/schemas/ResourcePermissions'
+            materializedPermissions:
+              $ref: '#/components/schemas/MaterializedPermissions'
+          additionalProperties: false
+        opensearch:
+          type: object
+          properties:
+            document:
+              $ref: '#/components/schemas/SearchIndexDocument'
+          additionalProperties: false
+      additionalProperties: false
+    FolderDiagnosticReport:
+      type: object
+      description: |
+        What each store holds about one folder. Empty where the workspace graph does not know the
+        identifier, since the graph's record is what the other sections are gathered from.
+      properties:
+        resourceType:
+          type: string
+          enum:
+            - folder
+        neo4j:
+          type: object
+          properties:
+            folder:
+              allOf:
+                - $ref: '#/components/schemas/WorkspaceResourceRecord'
+              description: The graph's record of the folder, with its path and parent folder resolved.
+          additionalProperties: false
+        computed:
+          type: object
+          description: What the workspace derives from the graph rather than stores in it.
+          properties:
+            permissions:
+              $ref: '#/components/schemas/ResourcePermissions'
+            materializedPermissions:
+              $ref: '#/components/schemas/MaterializedPermissions'
+          additionalProperties: false
+        opensearch:
+          type: object
+          properties:
+            document:
+              $ref: '#/components/schemas/SearchIndexDocument'
+          additionalProperties: false
+      additionalProperties: false
+    GroupDiagnosticReport:
+      type: object
+      description: |
+        What each store holds about one group. Empty where the workspace graph does not know the
+        identifier, since the graph's record is what the other sections are gathered from.
+      properties:
+        resourceType:
+          type: string
+          enum:
+            - group
+        neo4j:
+          allOf:
+            - $ref: '#/components/schemas/WorkspaceResourceRecord'
+          description: The graph's record of the group.
+        groupUsers:
+          allOf:
+            - $ref: '#/components/schemas/GroupMembership'
+          description: The group's members and administrators.
+        searchCedarIds:
+          type: array
+          description: |
+            Every indexed resource the group appears on. Null where OpenSearch could not be read:
+            the failure is logged rather than returned.
+          nullable: true
+          items:
+            type: string
+            format: uri
+        opensearch:
+          type: object
+          description: |
+            The keys the search index permits this group's resources under, one per role. Computed
+            from the group identifier rather than read from the index, so they are what to look for
+            in a document that is not being found.
+          properties:
+            viewerKey:
+              type: string
+            editorKey:
+              type: string
+            managerKey:
+              type: string
+          additionalProperties: false
+      additionalProperties: false
+    UserResourceCounts:
+      type: object
+      description: One count per artifact type. Template instances are counted under `templateInstance`.
+      properties:
+        field:
+          type: integer
+          format: int64
+        element:
+          type: integer
+          format: int64
+        template:
+          type: integer
+          format: int64
+        templateInstance:
+          type: integer
+          format: int64
+        folder:
+          type: integer
+          format: int64
+      additionalProperties: false
+    UserDiagnosticReport:
+      type: object
+      description: |
+        What each store holds about one user. Empty where the user store does not know the
+        identifier, since the stored profile is what the other sections are gathered from.
+      properties:
+        resourceType:
+          type: string
+          enum:
+            - user
+        cedarUser:
+          type: object
+          description: |
+            The stored user profile: identity, home folder, roles, permissions, API keys, UI
+            preferences and the authentication source behind the account.
+          additionalProperties: true
+        neo4j:
+          type: object
+          properties:
+            user:
+              allOf:
+                - $ref: '#/components/schemas/WorkspaceResourceRecord'
+              description: The graph's record of the user.
+            extra:
+              type: object
+              description: What the graph answers about the user rather than stores about them.
+              properties:
+                accessibleCount:
+                  allOf:
+                    - $ref: '#/components/schemas/UserResourceCounts'
+                  description: How much of each type the user may reach, counted in the graph.
+                groupsWithMembership:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CedarGroupReference'
+                groupsWithAdministrator:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CedarGroupReference'
+              additionalProperties: false
+          additionalProperties: false
+        opensearch:
+          type: object
+          description: |
+            How much of each type the search index will return for the user at each role. A count of
+            -1 means OpenSearch could not be read; the failure is logged rather than returned. Read
+            against the graph's own count: the two disagreeing is how a stale permission index shows
+            itself.
+          properties:
+            viewerCount:
+              $ref: '#/components/schemas/UserResourceCounts'
+            editorCount:
+              $ref: '#/components/schemas/UserResourceCounts'
+            managerCount:
+              $ref: '#/components/schemas/UserResourceCounts'
+          additionalProperties: false
+        keycloak:
+          type: object
+          properties:
+            user:
+              type: object
+              description: |
+                The Keycloak account behind the user, as Keycloak represents it, with its effective
+                realm roles filled in. Null where Keycloak could not be read.
+              nullable: true
+              additionalProperties: true
+          additionalProperties: false
+      additionalProperties: false
+
+    # ---- environment model ----------------------------------------------------------------------
+
+    DeclaredEnvironmentVariable:
+      type: object
+      description: One variable a component declares. A declaration is not a value, and none is reported.
+      properties:
+        name:
+          type: string
+        secure:
+          type: boolean
+          description: Whether the variable is flagged secret.
+        presentInHostEnvironment:
+          type: boolean
+          description: Whether this host sets the variable at all, which is the only fact about a
+            value that a component with nothing running can honestly report.
+      additionalProperties: false
+    ComponentDeclarations:
+      type: object
+      description: One non-server component and the variables it declares.
+      properties:
+        component:
+          type: string
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeclaredEnvironmentVariable'
+      additionalProperties: false
+    EnvironmentDeclarationReport:
+      type: object
+      description: |
+        The static declaration table for the components that are builds and scripts rather than
+        running servers. Servers answer for themselves, with resolved values, on the server
+        environment report.
+      properties:
+        note:
+          type: string
+          description: Why no value accompanies a declaration here.
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComponentDeclarations'
+      additionalProperties: false
+    UnmodelledEnvironmentReport:
+      type: object
+      description: |
+        CEDAR_* variables this host sets that the configuration model does not define. Names only:
+        a variable outside the model carries no secrecy flag, so its value is withheld.
+      properties:
+        scope:
+          type: string
+          description: Which host the names were read from.
+        note:
+          type: string
+          description: How to read the list, and why a name on it is not by itself an unused variable.
+        count:
+          type: integer
+          format: int32
+        variables:
+          type: object
+          description: One entry per unmodelled name, sorted by name.
+          additionalProperties:
+            type: object
+            properties:
+              hasValue:
+                type: boolean
+                description: Whether the host sets the variable to something other than the empty string.
+            additionalProperties: false
+      additionalProperties: false
+
+    # ---- health checks --------------------------------------------------------------------------
+
+    HealthCheckError:
+      type: object
+      description: What a health check threw, where it threw rather than reported.
+      properties:
+        type:
+          type: string
+        message:
+          type: string
+          nullable: true
+        stack:
+          type: array
+          items:
+            type: string
+        cause:
+          $ref: '#/components/schemas/HealthCheckError'
+      additionalProperties: false
+    HealthCheckResult:
+      type: object
+      description: |
+        One check's result. A check may attach details of its own, so the object is left open.
+      properties:
+        healthy:
+          type: boolean
+        message:
+          type: string
+          description: What the check reported. Absent where it reported nothing.
+        error:
+          $ref: '#/components/schemas/HealthCheckError'
+        duration:
+          type: integer
+          format: int64
+          description: How long the check took, in milliseconds.
+        timestamp:
+          type: string
+          description: When the check ran.
+      additionalProperties: true
+    HealthCheckReport:
+      type: object
+      description: |
+        The named server's health checks, keyed by check name and serialized as that server
+        serialized them. Which checks a server registers depends on the dependencies it holds.
+      additionalProperties:
+        $ref: '#/components/schemas/HealthCheckResult'
+
+    # ---- host -----------------------------------------------------------------------------------
+
+    RepositoryState:
+      type: object
+      description: |
+        One repository's git state. Every field but the name is null where the repository could not
+        be read, and `error` then says why.
+      properties:
+        repository:
+          type: string
+          description: The directory name under CEDAR_HOME.
+        branch:
+          type: string
+          nullable: true
+          description: The checked-out branch, or `(detached)` where HEAD is not on one.
+        commit:
+          type: string
+          nullable: true
+          description: The full commit SHA at HEAD.
+        committedAt:
+          type: string
+          format: date-time
+          nullable: true
+        uncommittedFiles:
+          type: integer
+          format: int32
+          nullable: true
+          description: How many tracked files differ from HEAD. Non-zero is a hot-patch applied on the box.
+        ahead:
+          type: integer
+          format: int32
+          nullable: true
+        behind:
+          type: integer
+          format: int32
+          nullable: true
+        upstream:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+      additionalProperties: false
+    HostGitReport:
+      type: object
+      description: The git state of every repository directly under CEDAR_HOME on this host.
+      properties:
+        scope:
+          type: string
+          description: Which host the report covers.
+        cedarHome:
+          type: string
+          nullable: true
+          description: CEDAR_HOME as this service resolved it, or null where its sandbox does not carry it.
+        repositories:
+          type: array
+          description: One entry per repository, sorted by name. Empty where CEDAR_HOME could not be listed.
+          items:
+            $ref: '#/components/schemas/RepositoryState'
+      additionalProperties: false
+    FilesystemUsage:
+      type: object
+      description: The room left on one filesystem, read through a directory on it.
+      properties:
+        path:
+          type: string
+        totalBytes:
+          type: integer
+          format: int64
+        usableBytes:
+          type: integer
+          format: int64
+          description: What is left for this process.
+        usedPercent:
+          type: number
+          format: double
+          description: How full the filesystem is, to one decimal place.
+      additionalProperties: false
+    LogFileEntry:
+      type: object
+      description: One log file's size and age. A large file written to seconds ago is a log nothing is rotating.
+      properties:
+        path:
+          type: string
+        sizeBytes:
+          type: integer
+          format: int64
+        modifiedAt:
+          type: string
+          format: date-time
+        ageDays:
+          type: integer
+          format: int64
+      additionalProperties: false
+    LogDirectoryReport:
+      type: object
+      description: What the log directory holds, and the largest files in it.
+      properties:
+        directory:
+          type: string
+          nullable: true
+        readable:
+          type: boolean
+          description: False where the directory does not exist or could not be walked.
+        error:
+          type: string
+          description: What the walk reported, where it failed.
+        fileCount:
+          type: integer
+          format: int32
+          description: Every regular file under the directory, not only the ones listed.
+        totalBytes:
+          type: integer
+          format: int64
+        files:
+          type: array
+          description: The largest files, biggest first, capped at twenty-five entries.
+          items:
+            $ref: '#/components/schemas/LogFileEntry'
+      additionalProperties: false
+    HostDiskReport:
+      type: object
+      description: Room left on the filesystems CEDAR writes to, and the largest files under its log directory.
+      properties:
+        scope:
+          type: string
+          description: Which host the report covers.
+        cedarHome:
+          type: string
+          nullable: true
+        filesystems:
+          type: array
+          description: One entry per readable path. An unreadable path is skipped rather than reported as empty.
+          items:
+            $ref: '#/components/schemas/FilesystemUsage'
+        logs:
+          $ref: '#/components/schemas/LogDirectoryReport'
+      additionalProperties: false
+
+    # ---- counts ---------------------------------------------------------------------------------
+
+    MySqlTable:
+      type: object
+      description: One table, as information_schema describes it.
+      properties:
+        name:
+          type: string
+        engine:
+          type: string
+          nullable: true
+        rowsApproximate:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            The optimizer's estimate, which for InnoDB comes from sampling and can be far out. Null
+            where the optimizer holds no statistics for the table, which is not the same fact as an
+            empty table.
+        rowsExact:
+          type: integer
+          format: int64
+          nullable: true
+          description: The counted rows. Null unless exact counting was asked for, and null where that count failed.
+        countError:
+          type: string
+          description: Why the exact count is missing, where it was asked for and failed.
+        dataBytes:
+          type: integer
+          format: int64
+        indexBytes:
+          type: integer
+          format: int64
+        totalBytes:
+          type: integer
+          format: int64
+          description: Data and indexes together.
+        freeBytes:
+          type: integer
+          format: int64
+          description: |
+            Pages the table has released without returning them to the filesystem. A large value
+            beside a small row count is a table that was emptied and never rebuilt.
+        averageRowBytes:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+      additionalProperties: false
+    MySqlDatabase:
+      type: object
+      description: One schema, with its tables and their totals.
+      properties:
+        name:
+          type: string
+        source:
+          type: string
+          description: Which datasource reached the schema first. Two datasources on one host can see the same schema.
+        tableCount:
+          type: integer
+          format: int32
+        rowsApproximate:
+          type: integer
+          format: int64
+        rowsExact:
+          type: integer
+          format: int64
+          nullable: true
+          description: Null unless at least one table in the schema was counted exactly.
+        dataBytes:
+          type: integer
+          format: int64
+        indexBytes:
+          type: integer
+          format: int64
+        totalBytes:
+          type: integer
+          format: int64
+        freeBytes:
+          type: integer
+          format: int64
+        tables:
+          type: array
+          description: Every base table, largest first.
+          items:
+            $ref: '#/components/schemas/MySqlTable'
+      additionalProperties: false
+    MySqlSource:
+      type: object
+      description: |
+        One configured datasource and what it reached. An unreachable database is reported here
+        rather than thrown, because which parts of CEDAR are answering is the point of the report.
+      properties:
+        id:
+          type: string
+          enum:
+            - log
+            - messaging
+        configKey:
+          type: string
+          description: The datasource's key in cedar-main.yml.
+          enum:
+            - dbLogging
+            - messagingServer
+        configured:
+          type: boolean
+        reachable:
+          type: boolean
+        error:
+          type: string
+          nullable: true
+          description: What the connection or the query reported, where one failed.
+        server:
+          type: string
+          description: The host and port the JDBC URL points at. Absent where the datasource is not configured.
+        schema:
+          type: string
+          nullable: true
+          description: The schema named in that URL.
+        schemas:
+          type: array
+          description: The schemas this connection's user could see, in the order they were read.
+          items:
+            type: string
+      additionalProperties: false
+    MySqlReport:
+      type: object
+      description: |
+        Every table in every MySQL schema CEDAR's configured datasources can see, with its row count
+        and the space it occupies.
+      properties:
+        exactCounts:
+          type: boolean
+          description: Whether rows were counted rather than estimated.
+        sources:
+          type: array
+          description: One entry per configured datasource, whether or not it answered.
+          items:
+            $ref: '#/components/schemas/MySqlSource'
+        databases:
+          type: array
+          description: One entry per schema reached, sorted by name.
+          items:
+            $ref: '#/components/schemas/MySqlDatabase'
+      additionalProperties: false
+    QueueDepths:
+      type: object
+      description: |
+        How many items wait in each of CEDAR's Redis queues. A queue that keeps growing is the sign
+        that whatever drains it has stopped.
+      properties:
+        searchPermission:
+          type: integer
+          format: int64
+        ncbiSubmission:
+          type: integer
+          format: int64
+        appLog:
+          type: integer
+          format: int64
+        valuerecommender:
+          type: integer
+          format: int64
+        cloneInstances:
+          type: integer
+          format: int64
+      additionalProperties: false
+    StoreCounts:
+      type: object
+      description: |
+        What each store holds, counted store by store so the figures can be read against each other.
+        The workspace graph is the authoritative count.
+      properties:
+        neo4j:
+          type: object
+          description: The workspace graph.
+          properties:
+            user:
+              type: integer
+              format: int64
+            group:
+              type: integer
+              format: int64
+            category:
+              type: integer
+              format: int64
+            folder:
+              type: integer
+              format: int64
+            field:
+              type: integer
+              format: int64
+            element:
+              type: integer
+              format: int64
+            template:
+              type: integer
+              format: int64
+            instance:
+              type: integer
+              format: int64
+          additionalProperties: false
+        mongo:
+          type: object
+          description: The artifact store, which holds no folders.
+          properties:
+            field:
+              type: integer
+              format: int64
+            element:
+              type: integer
+              format: int64
+            template:
+              type: integer
+              format: int64
+            instance:
+              type: integer
+              format: int64
+          additionalProperties: false
+        opensearch:
+          allOf:
+            - $ref: '#/components/schemas/ArtifactCountsByType'
+          description: The search index.
+        keycloak:
+          type: object
+          description: The identity provider. Empty where Keycloak could not be read.
+          properties:
+            user:
+              type: integer
+              format: int32
+          additionalProperties: false
+        errorPack:
+          type: string
+          description: What went wrong reading Keycloak, where it could not be read.
+      additionalProperties: false
+    SearchIndexCounts:
+      type: object
+      description: |
+        What the search index holds. Read alongside the workspace graph's counts: the two
+        disagreeing is how a half-finished reindex shows itself.
+      properties:
+        opensearch:
+          type: object
+          properties:
+            field:
+              type: integer
+              format: int64
+            element:
+              type: integer
+              format: int64
+            template:
+              type: integer
+              format: int64
+            instance:
+              type: integer
+              format: int64
+            folder:
+              type: integer
+              format: int64
+            artifactTotal:
+              type: integer
+              format: int64
+              description: Every artifact document, whatever its type.
+            recommenderTotal:
+              type: integer
+              format: int64
+              description: Every document in the value recommender's own index.
+          additionalProperties: false
+      additionalProperties: false
+
+    # ---- server report --------------------------------------------------------------------------
+
+    EnvironmentVariableEntry:
+      type: object
+      description: |
+        Where one variable stands for one server. The state is what matters: a variable the server
+        reads and the environment does not supply is a misconfiguration, while the same variable
+        absent from a server that never reads it is by design.
+      properties:
+        name:
+          type: string
+        state:
+          type: string
+          enum:
+            - SET
+            - DECLARED_BUT_UNSET
+            - USING_DEFAULT
+            - NOT_DECLARED
+        secure:
+          type: boolean
+          description: Whether the variable is flagged secret, and so whether its value is masked.
+        type:
+          type: string
+          enum:
+            - STRING
+            - NUMERIC
+            - BOOLEAN
+        value:
+          type: string
+          nullable: true
+          description: |
+            The value, masked where the variable is secret. Null unless the state is SET: a value the
+            server does not declare never leaves it, which is the point of the sandbox.
+        presentInHostEnvironment:
+          type: boolean
+          description: Whether the host's process environment sets the variable at all.
+      additionalProperties: false
+    ServerEnvironmentReport:
+      type: object
+      description: The environment variables the named server resolved its configuration from.
+      properties:
+        application:
+          type: string
+          description: The server's display name.
+        server:
+          type: string
+          description: The server's name as the configuration spells it.
+        component:
+          type: string
+          nullable: true
+          description: The configuration model's name for the server.
+        variables:
+          type: array
+          description: One entry per CEDAR variable, declared or not.
+          items:
+            $ref: '#/components/schemas/EnvironmentVariableEntry'
+      additionalProperties: false
+    ServerConfigurationReport:
+      type: object
+      description: cedar-main.yml as the named server resolved it.
+      properties:
+        application:
+          type: string
+        server:
+          type: string
+        configuration:
+          type: object
+          description: |
+            The configuration template with this server's environment substituted into it, masked by
+            key name and by value. A placeholder that could not be resolved is left as the literal
+            ${NAME} rather than blanked, because that is the finding.
+          additionalProperties: true
+      additionalProperties: false
+    ServerBuildReport:
+      type: object
+      description: |
+        The version the named server's environment declares, beside the artifact its JVM loaded. A
+        server reporting the release version from an artifact older than the release was pulled and
+        not rebuilt.
+      properties:
+        application:
+          type: string
+        server:
+          type: string
+        version:
+          type: string
+          nullable: true
+        versionModifier:
+          type: string
+          nullable: true
+        host:
+          type: string
+          nullable: true
+        pid:
+          type: integer
+          format: int64
+        java.version:
+          type: string
+        java.vendor:
+          type: string
+        jvm.name:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        uptimeMs:
+          type: integer
+          format: int64
+        artifactPath:
+          type: string
+          nullable: true
+          description: Where the server's own code was loaded from. Null where the class loader has no code source.
+        artifactType:
+          type: string
+          description: Whether that is a packaged jar or a build tree's class directory.
+          enum:
+            - jar
+            - classes
+        artifactBuiltAt:
+          type: string
+          format: date-time
+          nullable: true
+        artifactSizeBytes:
+          type: integer
+          format: int64
+          description: Present for a jar, absent for a class directory.
+        artifactError:
+          type: string
+          description: Why the artifact could not be located, where it could not be.
+        implementationVersion:
+          type: string
+          nullable: true
+          description: Implementation-Version from the manifest, where the artifact carries one.
+      additionalProperties: false
+    ServerJvmReport:
+      type: object
+      description: |
+        What the named server's JVM is doing: memory, host, threads and garbage collection. Thread
+        stack traces are not included; the server serves the full dump on its own route.
+      properties:
+        jvm.memory.heap.used:
+          type: integer
+          format: int64
+        jvm.memory.heap.max:
+          type: integer
+          format: int64
+        jvm.memory.heap.committed:
+          type: integer
+          format: int64
+        jvm.memory.heap.init:
+          type: integer
+          format: int64
+        jvm.memory.non-heap.used:
+          type: integer
+          format: int64
+        jvm.memory.non-heap.max:
+          type: integer
+          format: int64
+        jvm.memory.non-heap.committed:
+          type: integer
+          format: int64
+        jvm.memory.non-heap.init:
+          type: integer
+          format: int64
+        jvm.runtime.memory.total:
+          type: integer
+          format: int64
+        jvm.runtime.memory.free:
+          type: integer
+          format: int64
+        jvm.runtime.memory.max:
+          type: integer
+          format: int64
+        os.available-processors:
+          type: integer
+          format: int32
+        os.architecture:
+          type: string
+        os.name:
+          type: string
+        os.version:
+          type: string
+        os.load-average:
+          type: number
+          format: double
+          description: The host's one-minute load average, or a negative number where the platform does not report it.
+        current-thread.cpu-time:
+          type: integer
+          format: int64
+        current-thread.user-time:
+          type: integer
+          format: int64
+        thread.count:
+          type: integer
+          format: int32
+        thread.daemon.count:
+          type: integer
+          format: int32
+        thread.started.count:
+          type: integer
+          format: int64
+      additionalProperties:
+        type: integer
+        format: int64
+        description: |
+          One entry per garbage collector the JVM registered, named as that collector names itself
+          and holding the collections it has run. Which collectors appear depends on the JVM.
+
+    # ---- worker ---------------------------------------------------------------------------------
+
+    LogTableFreshness:
+      type: object
+      description: The newest row in one log table, and how far behind it is.
+      properties:
+        table:
+          type: string
+          description: The table's key in the log query engine.
+        sqlTable:
+          type: string
+          description: The physical table name.
+        newestAt:
+          type: string
+          nullable: true
+          description: That row's timestamp in UTC, or null where the table is empty.
+        lagSeconds:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            Seconds between that row and the log database's own UTC clock, or null where the table is
+            empty. A negative value is a clock disagreement rather than a lag, and is reported as it
+            was measured.
+      additionalProperties: false
+    WorkerLagReport:
+      type: object
+      description: |
+        The depth of the application log queue beside the age of the newest row the worker wrote.
+        Reported together because neither number means anything alone.
+      properties:
+        observedAt:
+          type: string
+          format: date-time
+        appLogQueueDepth:
+          type: integer
+          format: int64
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/LogTableFreshness'
+        worstLagSeconds:
+          type: integer
+          format: int64
+          nullable: true
+          description: The largest lag across the tables, or null where every table is empty.
+        status:
+          type: string
+          description: The verdict the depth and the lag imply. UNKNOWN where nothing has been written at all.
+          enum:
+            - OK
+            - LAGGING
+            - STALLED
+            - UNKNOWN
+        laggingAfterSeconds:
+          type: integer
+          format: int64
+          description: The lag above which the pipeline counts as behind.
+        stalledAfterSeconds:
+          type: integer
+          format: int64
+          description: The lag above which nothing is taken to be draining.
+      additionalProperties: false
+
+    # ---- log usage ------------------------------------------------------------------------------
+
+    UsageTotals:
+      type: object
+      description: |
+        Request volume and latency across a whole range. The percentiles are computed from the merged
+        latency histogram of every covered hour, not averaged from per-hour percentiles. Every field
+        is zero where no hour in the range holds a row.
+      properties:
+        reqCount:
+          type: integer
+          format: int64
+        errorCount:
+          type: integer
+          format: int64
+        p50Nanos:
+          type: integer
+          format: int64
+        p95Nanos:
+          type: integer
+          format: int64
+        p99Nanos:
+          type: integer
+          format: int64
+      additionalProperties: false
+    TimeBucket:
+      type: object
+      description: One hour of the request volume series.
+      properties:
+        hourUtc:
+          type: string
+          description: The hour this bucket covers, as a UTC instant on the hour.
+        reqCount:
+          type: integer
+          format: int64
+        errorCount:
+          type: integer
+          format: int64
+      additionalProperties: false
+    LogUsageSummary:
+      type: object
+      description: |
+        The totals for a range beside the hourly series behind them. The range is echoed back as the
+        server resolved it, so a caller that omitted a bound can see which one it got.
+      properties:
+        from:
+          type: string
+          description: The inclusive lower bound of the range, as a UTC instant.
+        to:
+          type: string
+          description: The exclusive upper bound of the range, as a UTC instant.
+        totals:
+          $ref: '#/components/schemas/UsageTotals'
+        series:
+          type: array
+          description: One entry per hour that holds a row, oldest first. Hours with no traffic are absent.
+          items:
+            $ref: '#/components/schemas/TimeBucket'
+      additionalProperties: false
   securitySchemes:
     api_key:
       type: apiKey

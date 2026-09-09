@@ -82,7 +82,8 @@ public class EnvironmentModelResource extends AbstractMonitorResource {
           + "event listener and the shell utilities. Names only — these components are builds and scripts, "
           + "not processes that can be asked what they resolved.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Declared variable names per component"),
+      @ApiResponse(responseCode = "200", description = "Declared variable names per component",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/EnvironmentDeclarationReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission")
   })
@@ -152,7 +153,8 @@ public class EnvironmentModelResource extends AbstractMonitorResource {
           + "secrecy flag, so its value is withheld. A name here is either a consumer reading the "
           + "environment directly, or a variable that has fallen out of use.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Names of unmodelled CEDAR_* variables"),
+      @ApiResponse(responseCode = "200", description = "Names of unmodelled CEDAR_* variables",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/UnmodelledEnvironmentReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission")
   })

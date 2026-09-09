@@ -50,7 +50,8 @@ public class RedisQueueCountsResource extends AbstractMonitorResource {
   @Operation(summary = "Get the depth of each work queue",
       description = "Report how many items are waiting in each of CEDAR's Redis queues: search permissions, NCBI submissions, application logs, value recommender, and instance cloning. A queue that keeps growing is the sign that whatever drains it has stopped.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "A count per queue"),
+      @ApiResponse(responseCode = "200", description = "A count per queue",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/QueueDepths"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")

@@ -64,7 +64,8 @@ public class ResourceInfoFolder extends AbstractMonitorResource {
           + "another. A store that cannot be reached leaves its section null rather than failing the "
           + "request, and an identifier nothing knows returns an empty answer with 200.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "What each store holds about the folder"),
+      @ApiResponse(responseCode = "200", description = "What each store holds about the folder",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/FolderDiagnosticReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")

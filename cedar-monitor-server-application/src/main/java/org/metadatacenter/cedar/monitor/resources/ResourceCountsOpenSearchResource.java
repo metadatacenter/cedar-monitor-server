@@ -52,7 +52,8 @@ public class ResourceCountsOpenSearchResource extends AbstractMonitorResource {
   @Operation(summary = "Count what the search index holds",
       description = "Report how many artifacts of each type OpenSearch has indexed. Read alongside the graph counts: the two disagreeing is how a half-finished reindex shows itself.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "A count per artifact type, as the search index has them"),
+      @ApiResponse(responseCode = "200", description = "A count per artifact type, as the search index has them",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/SearchIndexCounts"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")

@@ -79,7 +79,8 @@ public class ResourceCountsResource extends AbstractMonitorResource {
   @Operation(summary = "Count what the workspace graph holds",
       description = "Report how many users, groups, categories, folders, and artifacts of each type Neo4j holds. This is the authoritative count; the search index is compared against it.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "A count per kind, as the workspace graph has them"),
+      @ApiResponse(responseCode = "200", description = "A count per kind, as the workspace graph has them",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/StoreCounts"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")

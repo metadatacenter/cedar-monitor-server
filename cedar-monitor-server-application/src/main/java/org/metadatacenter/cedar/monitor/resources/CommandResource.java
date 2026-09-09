@@ -70,7 +70,8 @@ public class CommandResource extends AbstractMonitorResource {
           + "line, where what arrives is whatever a user pasted. Always answers 200: a string that "
           + "resolves to nothing is a finding, not a failed request, and the body says so.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "What the input resolved to, and how"),
+      @ApiResponse(responseCode = "200", description = "What the input resolved to, and how",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/ResourceIdLookup"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")

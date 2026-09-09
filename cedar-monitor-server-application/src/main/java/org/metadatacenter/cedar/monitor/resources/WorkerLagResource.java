@@ -81,7 +81,8 @@ public class WorkerLagResource extends AbstractMonitorResource {
           + "in each log table, and the verdict those two imply: OK, LAGGING or STALLED. Reported together "
           + "because neither number means anything alone.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Queue depth, write lag and verdict"),
+      @ApiResponse(responseCode = "200", description = "Queue depth, write lag and verdict",
+          content = @Content(schema = @Schema(ref = "#/components/schemas/WorkerLagReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Redis or the log database could not be read")
