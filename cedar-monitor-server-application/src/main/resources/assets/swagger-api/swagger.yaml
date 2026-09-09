@@ -1693,9 +1693,9 @@ paths:
       - Diagnostics
   /resources/counts:
     get:
-      description: "Report how many users, groups, categories, folders, and artifacts\
-        \ of each type Neo4j holds. This is the authoritative count; the search index\
-        \ is compared against it."
+      description: "Report graph, document-store, search-index and Keycloak totals.\
+        \ Document counts are obtained through resource and artifact; a failed count\
+        \ does not become zero."
       operationId: resourceCounts
       responses:
         "200":
@@ -1703,7 +1703,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoreCounts"
-          description: "A count per kind, as the workspace graph has them"
+          description: Counts by store and resource kind
         "401":
           content:
             application/json:
@@ -1722,9 +1722,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: A backing service is unavailable
       security:
       - api_key: []
-      summary: Count what the workspace graph holds
+      summary: Compare counts across backing stores
       tags:
       - Counts
   /resources/counts/opensearch:

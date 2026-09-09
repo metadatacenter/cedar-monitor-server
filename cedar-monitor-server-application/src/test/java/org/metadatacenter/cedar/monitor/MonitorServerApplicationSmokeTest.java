@@ -56,6 +56,13 @@ public class MonitorServerApplicationSmokeTest {
   }
 
   @Test
+  public void monitorDoesNotInitializeAnArtifactDocumentStore() {
+    Assertions.assertEquals(org.metadatacenter.cedar.util.dw.CedarMicroserviceApplication.class,
+        MonitorServerApplication.class.getSuperclass());
+    Assertions.assertFalse(SERVER.getEnvironment().healthChecks().getNames().contains("mongo"));
+  }
+
+  @Test
   public void indexIsServed() throws Exception {
     HttpResponse<String> response = get("/");
     Assertions.assertEquals(200, response.statusCode());

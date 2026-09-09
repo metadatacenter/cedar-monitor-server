@@ -74,6 +74,8 @@ public class MonitorRoutesAndPermissionsTest {
     environment.put("CEDAR_MONITOR_ADMIN_PORT", "0");
     environment.put("CEDAR_MONITOR_STOP_PORT", "0");
     environment.put("CEDAR_REDIS_PERSISTENT_PORT", "1");
+    environment.put("CEDAR_RESOURCE_SERVER_HOST", "127.0.0.1");
+    environment.put("CEDAR_RESOURCE_HTTP_PORT", "1");
     environment.put("CEDAR_ARTIFACT_SERVER_HOST", "127.0.0.1");
     environment.put("CEDAR_ARTIFACT_HTTP_PORT", "1");
     environment.put("CEDAR_ARTIFACT_ADMIN_PORT", "1");
@@ -298,6 +300,18 @@ public class MonitorRoutesAndPermissionsTest {
         "The response must not serialize the Redis stack: " + response.body());
     Assertions.assertFalse(response.body().contains("127.0.0.1"),
         "The client-facing outage response must not expose the Redis endpoint: " + response.body());
+  }
+
+  @Test
+  public void stoppedResourceCountsAreUnavailableRatherThanPartialOrZero() throws Exception {
+    var request = HttpRequest.newBuilder(URI.create("http://localhost:" + SERVER.getLocalPort() + "/resources/counts"))
+        .header("Authorization", adminUserAuthHeader).GET().build();
+    var response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+    Assertions.assertEquals(503, response.statusCode(), response.body());
+    var error = JsonMapper.STRICT_MAPPER.readTree(response.body());
+    Assertions.assertEquals("SERVICE_UNAVAILABLE", error.path("status").asText());
+    Assertions.assertFalse(error.has("mongo"), "An outage must not be a partial count report");
+    Assertions.assertFalse(response.body().contains("127.0.0.1"));
   }
 
   /** Sends the endpoint's request with an Authorization header; records transport errors. */
