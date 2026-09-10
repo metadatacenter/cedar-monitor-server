@@ -325,8 +325,7 @@ public class LogQueryResource extends AbstractMonitorResource {
   private static Response badRequest(IllegalArgumentException e) {
     String message = e.getMessage() == null ? "Invalid query spec." : e.getMessage();
     return CedarResponse.badRequest()
-        .errorMessage(message)
-        .extension("error", message)
+        .message(message)
         .build();
   }
 }
