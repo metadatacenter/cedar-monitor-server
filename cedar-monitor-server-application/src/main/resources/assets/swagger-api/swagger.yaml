@@ -2884,6 +2884,7 @@ components:
           format: int64
     LogQuerySpec:
       type: object
+      additionalProperties: false
       properties:
         cursor:
           type: string

@@ -3635,6 +3635,7 @@
       },
       "LogQuerySpec" : {
         "type" : "object",
+        "additionalProperties" : false,
         "properties" : {
           "cursor" : {
             "type" : "string"
