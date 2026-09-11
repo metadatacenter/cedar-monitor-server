@@ -74,6 +74,8 @@ public class MonitorRoutesAndPermissionsTest {
     environment.put("CEDAR_MONITOR_ADMIN_PORT", "0");
     environment.put("CEDAR_MONITOR_STOP_PORT", "0");
     environment.put("CEDAR_REDIS_PERSISTENT_PORT", "1");
+    environment.put("CEDAR_RESOURCE_SERVER_HOST", "127.0.0.1");
+    environment.put("CEDAR_RESOURCE_HTTP_PORT", "1");
     environment.put("CEDAR_ARTIFACT_SERVER_HOST", "127.0.0.1");
     environment.put("CEDAR_ARTIFACT_HTTP_PORT", "1");
     environment.put("CEDAR_ARTIFACT_ADMIN_PORT", "1");
@@ -192,7 +194,7 @@ public class MonitorRoutesAndPermissionsTest {
     HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
     Assertions.assertEquals(200, response.statusCode(), response.body());
-    JsonNode result = JsonMapper.MAPPER.readTree(response.body());
+    JsonNode result = JsonMapper.STRICT_MAPPER.readTree(response.body());
     Assertions.assertEquals(0, result.path("rowCount").asInt(), response.body());
     Assertions.assertEquals("test fixture", result.path("source").asText(), response.body());
     verify(LOG_QUERY_DAO, atLeastOnce())
@@ -221,7 +223,7 @@ public class MonitorRoutesAndPermissionsTest {
       HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
       Assertions.assertEquals(200, response.statusCode(), route + ": " + response.body());
-      Assertions.assertTrue(JsonMapper.MAPPER.readTree(response.body()).isEmpty(),
+      Assertions.assertTrue(JsonMapper.STRICT_MAPPER.readTree(response.body()).isEmpty(),
           route + " should report nothing rather than a partial record: " + response.body());
     }
   }
@@ -236,7 +238,7 @@ public class MonitorRoutesAndPermissionsTest {
     HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
     Assertions.assertEquals(200, response.statusCode());
-    JsonNode threads = JsonMapper.MAPPER.readTree(response.body());
+    JsonNode threads = JsonMapper.STRICT_MAPPER.readTree(response.body());
     Assertions.assertTrue(threads.size() > 1, "Expected details for more than one live thread");
     HashSet<Long> threadIds = new HashSet<>();
     threads.fields().forEachRemaining(entry -> {
@@ -262,7 +264,7 @@ public class MonitorRoutesAndPermissionsTest {
     HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
     Assertions.assertEquals(503, response.statusCode(), response.body());
-    JsonNode error = JsonMapper.MAPPER.readTree(response.body());
+    JsonNode error = JsonMapper.STRICT_MAPPER.readTree(response.body());
     Assertions.assertEquals("SERVICE_UNAVAILABLE", error.path("status").asText(), response.body());
     Assertions.assertEquals("Downstream service is unavailable", error.path("message").asText(), response.body());
     Assertions.assertTrue(error.path("originalException").isMissingNode()
@@ -287,7 +289,7 @@ public class MonitorRoutesAndPermissionsTest {
     HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
     Assertions.assertEquals(503, response.statusCode(), response.body());
-    JsonNode error = JsonMapper.MAPPER.readTree(response.body());
+    JsonNode error = JsonMapper.STRICT_MAPPER.readTree(response.body());
     Assertions.assertEquals("SERVICE_UNAVAILABLE", error.path("status").asText(), response.body());
     Assertions.assertEquals("Redis is unavailable", error.path("message").asText(), response.body());
     Assertions.assertTrue(error.path("originalException").isMissingNode()
@@ -298,6 +300,18 @@ public class MonitorRoutesAndPermissionsTest {
         "The response must not serialize the Redis stack: " + response.body());
     Assertions.assertFalse(response.body().contains("127.0.0.1"),
         "The client-facing outage response must not expose the Redis endpoint: " + response.body());
+  }
+
+  @Test
+  public void stoppedResourceCountsAreUnavailableRatherThanPartialOrZero() throws Exception {
+    var request = HttpRequest.newBuilder(URI.create("http://localhost:" + SERVER.getLocalPort() + "/resources/counts"))
+        .header("Authorization", adminUserAuthHeader).GET().build();
+    var response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+    Assertions.assertEquals(503, response.statusCode(), response.body());
+    var error = JsonMapper.STRICT_MAPPER.readTree(response.body());
+    Assertions.assertEquals("SERVICE_UNAVAILABLE", error.path("status").asText());
+    Assertions.assertFalse(error.has("mongo"), "An outage must not be a partial count report");
+    Assertions.assertFalse(response.body().contains("127.0.0.1"));
   }
 
   /** Sends the endpoint's request with an Authorization header; records transport errors. */

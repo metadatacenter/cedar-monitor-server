@@ -2,18 +2,15 @@ package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.metadatacenter.util.http.CedarError;
-import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.exception.CedarProcessingException;
@@ -29,18 +26,18 @@ import org.metadatacenter.server.search.util.IndexUtils;
 import org.metadatacenter.server.security.KeycloakUtilInfo;
 import org.metadatacenter.server.security.KeycloakUtils;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
-import org.metadatacenter.server.service.TemplateElementService;
-import org.metadatacenter.server.service.TemplateFieldService;
-import org.metadatacenter.server.service.TemplateInstanceService;
-import org.metadatacenter.server.service.TemplateService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.metadatacenter.exception.CedarDependencyUnavailableException;
+import org.metadatacenter.util.http.ArtifactCounts;
+import org.metadatacenter.util.http.ProxyUtil;
+import org.metadatacenter.util.http.HttpTimeouts;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,22 +49,10 @@ import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
 @SecurityRequirement(name = "api_key")
 public class ResourceCountsResource extends AbstractMonitorResource {
 
-  private static final Logger log = LoggerFactory.getLogger(ResourceCountsResource.class);
-  private static TemplateFieldService<String, JsonNode> templateFieldService;
-  private static TemplateElementService<String, JsonNode> templateElementService;
-  private static TemplateService<String, JsonNode> templateService;
-  private static TemplateInstanceService<String, JsonNode> templateInstanceService;
-  private static NodeSearchingService nodeSearchingService;
+  private final NodeSearchingService nodeSearchingService;
 
-  public ResourceCountsResource(CedarConfig cedarConfig, TemplateFieldService<String, JsonNode> templateFieldService,
-                                TemplateElementService<String, JsonNode> templateElementService,
-                                TemplateService<String, JsonNode> templateService, TemplateInstanceService<String,
-      JsonNode> templateInstanceService) {
+  public ResourceCountsResource(CedarConfig cedarConfig) {
     super(cedarConfig);
-    ResourceCountsResource.templateFieldService = templateFieldService;
-    ResourceCountsResource.templateElementService = templateElementService;
-    ResourceCountsResource.templateService = templateService;
-    ResourceCountsResource.templateInstanceService = templateInstanceService;
 
     IndexUtils indexUtils = new IndexUtils(cedarConfig);
     nodeSearchingService = indexUtils.getNodeSearchingService();
@@ -76,13 +61,14 @@ public class ResourceCountsResource extends AbstractMonitorResource {
   @GET
   @Timed
   @Path("/counts")
-  @Operation(summary = "Count what the workspace graph holds",
-      description = "Report how many users, groups, categories, folders, and artifacts of each type Neo4j holds. This is the authoritative count; the search index is compared against it.")
+  @Operation(summary = "Compare counts across backing stores",
+      description = "Report graph, document-store, search-index and Keycloak totals. Document counts are obtained through resource and artifact; a failed count does not become zero.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "A count per kind, as the workspace graph has them",
+      @ApiResponse(responseCode = "200", description = "Counts by store and resource kind",
           content = @Content(schema = @Schema(ref = "#/components/schemas/StoreCounts"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "503", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "A backing service is unavailable"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response resourceCounts() throws CedarException {
@@ -92,6 +78,13 @@ public class ResourceCountsResource extends AbstractMonitorResource {
     c.must(c.user()).have(CedarPermission.MONITOR_READ);
 
     Map<String, Object> r = new HashMap<>();
+
+    String countsUrl = cedarConfig.getServers().getResource().getBase() + ArtifactCounts.PATH;
+    try (ClassicHttpResponse upstream = ProxyUtil.proxyGet(countsUrl, c, HttpTimeouts.NO_REDIRECT_INTERACTIVE)) {
+      r.put("mongo", ArtifactCounts.read(upstream));
+    } catch (IOException e) {
+      throw new CedarDependencyUnavailableException("Artifact counts are unavailable", e);
+    }
 
     Map<String, Object> neo4j = new HashMap<>();
     r.put("neo4j", neo4j);
@@ -121,14 +114,6 @@ public class ResourceCountsResource extends AbstractMonitorResource {
     neo4j.put("template", templateTotalCount);
     long instanceTotalCount = fsNeo4JProxy.getTotalCount(CedarResourceType.INSTANCE);
     neo4j.put("instance", instanceTotalCount);
-
-    Map<String, Object> mongo = new HashMap<>();
-    r.put("mongo", mongo);
-
-    mongo.put("field", templateFieldService.count());
-    mongo.put("element", templateElementService.count());
-    mongo.put("template", templateService.count());
-    mongo.put("instance", templateInstanceService.count());
 
     Map<String, Object> opensearch = new HashMap<>();
     r.put("opensearch", opensearch);

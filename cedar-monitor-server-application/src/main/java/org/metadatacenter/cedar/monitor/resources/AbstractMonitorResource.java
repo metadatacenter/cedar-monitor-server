@@ -49,13 +49,13 @@ public abstract class AbstractMonitorResource extends CedarMicroserviceResource 
 
     if (serverConfig == null) {
       return CedarResponse.notFound()
-          .errorMessage("Server can not be found by name")
+          .message("Server can not be found by name")
           .parameter("server", server)
           .build();
     }
     if (serverConfig.getBase() == null) {
       return CedarResponse.internalServerError()
-          .errorMessage("No application base URL is configured for this server, so it can not be read")
+          .message("No application base URL is configured for this server, so it can not be read")
           .parameter("server", server)
           .build();
     }
@@ -73,7 +73,7 @@ public abstract class AbstractMonitorResource extends CedarMicroserviceResource 
       return Response.status(statusCode).type(mediaType).entity(content).build();
     } catch (IOException e) {
       return CedarResponse.internalServerError()
-          .errorMessage("Error while reading the response of " + server)
+          .message("Error while reading the response of " + server)
           .exception(e)
           .build();
     }
