@@ -24,7 +24,9 @@ class OpenApiSuccessContractTest {
   @Test
   void everySuccessPayloadIsDescribed() throws IOException {
     try (InputStream input = getClass().getResourceAsStream("/assets/swagger-api/swagger.json")) {
-      OpenApiSuccessContract.assertDescribed(input);
+      // The rebuild takes no request body: the Monitor supplies force itself, because anyone who
+      // has opened the page and pressed the button has already decided.
+      OpenApiSuccessContract.assertDescribed(input, "POST /search-index/regenerate");
     }
   }
 }

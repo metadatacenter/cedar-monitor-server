@@ -17,6 +17,118 @@ info:
   version: ${project.version}
 components:
   schemas:
+    IndexJobStatus:
+      type: object
+      description: |
+        What became of the most recent rebuild of one index, as the resource server reports it. The
+        Monitor passes this through unchanged.
+      required:
+        - state
+        - overdue
+      properties:
+        jobId:
+          type: string
+          nullable: true
+        state:
+          type: string
+          enum: [IDLE, RUNNING, COMPLETE, FAILED, ABANDONED, INTERRUPTED]
+        command:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        deadlineAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When a job that says nothing more will be believed to have stopped.
+        overdue:
+          type: boolean
+        failure:
+          type: string
+          nullable: true
+        progress:
+          allOf:
+            - $ref: '#/components/schemas/IndexingProgress'
+          nullable: true
+      additionalProperties: false
+    IndexJobStatusByIndex:
+      type: object
+      description: The state of each index a rebuild can contend over, keyed by the index name.
+      additionalProperties:
+        $ref: '#/components/schemas/IndexJobStatus'
+    IndexingProgress:
+      type: object
+      description: |
+        How far a rebuild has got. Each phase carries its own counter, because what is being counted
+        changes with it: pages of resources while enumerating, resources while indexing, nothing at
+        all while promoting. `total` is -1 until the phase's denominator is known, and the rate and
+        estimate are absent until enough has been done to measure them.
+      required:
+        - phase
+        - processed
+        - total
+      properties:
+        phase:
+          type: string
+          enum: [PENDING, LOADING_VALUE_SETS, ENUMERATING, COMPARING, INDEXING, VERIFYING, PROMOTING, DONE]
+        phaseDescription:
+          type: string
+          description: The phase in words, so a client need not keep its own table of these names.
+        processed:
+          type: integer
+          format: int64
+        total:
+          type: integer
+          format: int64
+          description: The current phase's denominator, or -1 while it is not yet known.
+        percentComplete:
+          type: number
+          format: double
+          nullable: true
+        totalByType:
+          type: object
+          description: How many resources of each kind the work list holds.
+          additionalProperties:
+            type: integer
+            format: int64
+        processedByType:
+          type: object
+          description: How many of each kind have been done.
+          additionalProperties:
+            type: integer
+            format: int64
+        startedAt:
+          type: string
+          format: date-time
+        lastUpdatedAt:
+          type: string
+          format: date-time
+          description: |
+            When the job last reported anything. This is what tells a slow rebuild from a stopped one,
+            and it is what the overdue deadline is measured from.
+        unitsPerSecond:
+          type: number
+          format: double
+          nullable: true
+          description: |
+            The rate over a trailing window rather than the whole run, absent until measurable. Null
+            and zero are different answers: only the second means no progress.
+        secondsRemaining:
+          type: integer
+          format: int64
+          nullable: true
+        estimatedFinishAt:
+          type: string
+          format: date-time
+          nullable: true
+      additionalProperties: false
 
     # ---- shared building blocks -----------------------------------------------------------------
 

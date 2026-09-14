@@ -60,7 +60,37 @@ public abstract class AbstractMonitorResource extends CedarMicroserviceResource 
           .build();
     }
 
-    ClassicHttpResponse proxyResponse = ProxyUtil.proxyGet(serverConfig.getBase() + relativePath, c);
+    return render(server, ProxyUtil.proxyGet(serverConfig.getBase() + relativePath, c));
+  }
+
+  /**
+   * The same, for a route that is asked to do something rather than to report.
+   *
+   * <p>The Monitor is otherwise read-only, and the one thing it may start — a search index rebuild —
+   * is not its own authority to grant. {@link ProxyUtil} forwards the caller's credential, so the
+   * resource server decides, against the permission that command has always required. The Monitor
+   * adds no privilege of its own; it only gives the command a page to be started from.
+   */
+  protected Response proxyPostToServer(String server, String relativePath, String body, CedarRequestContext c)
+      throws CedarException {
+    ServerConfig serverConfig = configFor(server);
+    if (serverConfig == null) {
+      return CedarResponse.notFound()
+          .message("Server can not be found by name, or has no application base URL configured")
+          .parameter("server", server)
+          .build();
+    }
+    return render(server, ProxyUtil.proxyPost(serverConfig.getBase() + relativePath, c, body));
+  }
+
+  private ServerConfig configFor(String server) {
+    ServerName serverName = ServerName.forName(server);
+    ServerConfig serverConfig = serverName == null ? null : cedarConfig.getServers().get(serverName);
+    return serverConfig == null || serverConfig.getBase() == null ? null : serverConfig;
+  }
+
+  /** Pass the other server's status and body through unchanged, whatever they were. */
+  private Response render(String server, ClassicHttpResponse proxyResponse) {
     ProxyUtil.proxyResponseHeaders(proxyResponse, response);
     HttpEntity entity = proxyResponse.getEntity();
     int statusCode = proxyResponse.getCode();

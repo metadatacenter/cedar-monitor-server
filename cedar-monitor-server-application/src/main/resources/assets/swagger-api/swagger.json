@@ -2395,6 +2395,122 @@
         "tags" : [ "Counts" ]
       }
     },
+    "/search-index/job-status" : {
+      "get" : {
+        "description" : "Report the state of each index rebuild, and for one that is running or was running, how far it got: the phase, the count against its total, the breakdown by resource type, the rate it is achieving and an estimate of when it will finish. A rebuild the server did not survive is reported as INTERRUPTED with the progress of its last heartbeat, rather than as though nothing had ever run.",
+        "operationId" : "jobStatus",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IndexJobStatusByIndex"
+                }
+              }
+            },
+            "description" : "The state of each index"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "How far the search index rebuild has got",
+        "tags" : [ "Search index" ]
+      }
+    },
+    "/search-index/regenerate" : {
+      "post" : {
+        "description" : "Queue a rebuild of the search index and answer with the job to poll. The rebuild runs for as long as the repository requires — hours, on a large one — while search continues against the existing index. Requires the search reindex permission, which the resource server checks against the caller's own credential; the Monitor adds no authority of its own.",
+        "operationId" : "regenerate",
+        "responses" : {
+          "202" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IndexJobStatus"
+                }
+              }
+            },
+            "description" : "The rebuild was queued"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller may not rebuild the search index"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "A rebuild is already running"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Start a full search index rebuild",
+        "tags" : [ "Search index" ]
+      }
+    },
     "/server-report/{server}/build" : {
       "get" : {
         "description" : "The version the named server's environment declares, together with the path and modification time of the artifact its JVM actually loaded, its uptime and its host.",
@@ -3546,6 +3662,133 @@
             "description" : "Which host the report covers."
           }
         }
+      },
+      "IndexJobStatus" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "description" : "What became of the most recent rebuild of one index, as the resource server reports it. The\nMonitor passes this through unchanged.\n",
+        "properties" : {
+          "command" : {
+            "type" : "string",
+            "nullable" : true
+          },
+          "deadlineAt" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "When a job that says nothing more will be believed to have stopped.",
+            "nullable" : true
+          },
+          "failure" : {
+            "type" : "string",
+            "nullable" : true
+          },
+          "finishedAt" : {
+            "type" : "string",
+            "format" : "date-time",
+            "nullable" : true
+          },
+          "jobId" : {
+            "type" : "string",
+            "nullable" : true
+          },
+          "overdue" : {
+            "type" : "boolean"
+          },
+          "progress" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/IndexingProgress"
+            } ],
+            "nullable" : true
+          },
+          "startedAt" : {
+            "type" : "string",
+            "format" : "date-time",
+            "nullable" : true
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "IDLE", "RUNNING", "COMPLETE", "FAILED", "ABANDONED", "INTERRUPTED" ]
+          }
+        },
+        "required" : [ "overdue", "state" ]
+      },
+      "IndexJobStatusByIndex" : {
+        "type" : "object",
+        "additionalProperties" : {
+          "$ref" : "#/components/schemas/IndexJobStatus"
+        },
+        "description" : "The state of each index a rebuild can contend over, keyed by the index name."
+      },
+      "IndexingProgress" : {
+        "type" : "object",
+        "additionalProperties" : false,
+        "description" : "How far a rebuild has got. Each phase carries its own counter, because what is being counted\nchanges with it: pages of resources while enumerating, resources while indexing, nothing at\nall while promoting. `total` is -1 until the phase's denominator is known, and the rate and\nestimate are absent until enough has been done to measure them.\n",
+        "properties" : {
+          "estimatedFinishAt" : {
+            "type" : "string",
+            "format" : "date-time",
+            "nullable" : true
+          },
+          "lastUpdatedAt" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "When the job last reported anything. This is what tells a slow rebuild from a stopped one,\nand it is what the overdue deadline is measured from.\n"
+          },
+          "percentComplete" : {
+            "type" : "number",
+            "format" : "double",
+            "nullable" : true
+          },
+          "phase" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "LOADING_VALUE_SETS", "ENUMERATING", "COMPARING", "INDEXING", "VERIFYING", "PROMOTING", "DONE" ]
+          },
+          "phaseDescription" : {
+            "type" : "string",
+            "description" : "The phase in words, so a client need not keep its own table of these names."
+          },
+          "processed" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "processedByType" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "integer",
+              "format" : "int64"
+            },
+            "description" : "How many of each kind have been done."
+          },
+          "secondsRemaining" : {
+            "type" : "integer",
+            "format" : "int64",
+            "nullable" : true
+          },
+          "startedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "The current phase's denominator, or -1 while it is not yet known."
+          },
+          "totalByType" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "integer",
+              "format" : "int64"
+            },
+            "description" : "How many resources of each kind the work list holds."
+          },
+          "unitsPerSecond" : {
+            "type" : "number",
+            "format" : "double",
+            "description" : "The rate over a trailing window rather than the whole run, absent until measurable. Null\nand zero are different answers: only the second means no progress.\n",
+            "nullable" : true
+          }
+        },
+        "required" : [ "phase", "processed", "total" ]
       },
       "Insights" : {
         "type" : "object",
