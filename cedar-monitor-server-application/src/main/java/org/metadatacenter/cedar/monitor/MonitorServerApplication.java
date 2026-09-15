@@ -113,6 +113,9 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
     final RedisQueueCountsResource redisQueueCounts = new RedisQueueCountsResource(cedarConfig);
     environment.jersey().register(redisQueueCounts);
 
+    final SearchIndexResource searchIndexResource = new SearchIndexResource(cedarConfig);
+    environment.jersey().register(searchIndexResource);
+
     final ResourceCountsResource resourceCounts = new ResourceCountsResource(cedarConfig);
     environment.jersey().register(resourceCounts);
 
