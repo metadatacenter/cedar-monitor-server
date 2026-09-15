@@ -3111,8 +3111,6 @@ components:
           type: array
           items:
             type: string
-        grouped:
-          type: boolean
         having:
           type: array
           items:
@@ -3400,24 +3398,80 @@ components:
       type: object
       additionalProperties: false
       description: |
-        How many items wait in each of CEDAR's Redis queues. A queue that keeps growing is the sign
-        that whatever drains it has stopped.
+        How many items wait in each of CEDAR's Redis queues, and in the processing and dead-letter
+        lists beside them. A pending queue that keeps growing is the sign that whatever drains it has
+        stopped; a processing list stuck at 1 is the sign that one message is not finishing.
       properties:
         appLog:
           type: integer
           format: int64
+          description: Waiting to be claimed.
+        appLogDeadLetter:
+          type: integer
+          format: int64
+          description: "Parked after repeated handling failures. Reported, not fatal\
+            \ - the server keeps serving."
+        appLogProcessing:
+          type: integer
+          format: int64
+          description: Claimed by a consumer and not yet acknowledged. A sustained
+            1 with no progress is a wedged message.
         cloneInstances:
           type: integer
           format: int64
+          description: Waiting to be claimed.
+        cloneInstancesDeadLetter:
+          type: integer
+          format: int64
+          description: "Parked after repeated handling failures. Reported, not fatal\
+            \ - the server keeps serving."
+        cloneInstancesProcessing:
+          type: integer
+          format: int64
+          description: Claimed by a consumer and not yet acknowledged. A sustained
+            1 with no progress is a wedged message.
         ncbiSubmission:
           type: integer
           format: int64
+          description: Waiting to be claimed.
+        ncbiSubmissionDeadLetter:
+          type: integer
+          format: int64
+          description: "Parked after repeated handling failures. Reported, not fatal\
+            \ - the server keeps serving."
+        ncbiSubmissionProcessing:
+          type: integer
+          format: int64
+          description: Claimed by a consumer and not yet acknowledged. A sustained
+            1 with no progress is a wedged message.
         searchPermission:
           type: integer
           format: int64
+          description: Waiting to be claimed.
+        searchPermissionDeadLetter:
+          type: integer
+          format: int64
+          description: "Parked after repeated handling failures. Reported, not fatal\
+            \ - the server keeps serving."
+        searchPermissionProcessing:
+          type: integer
+          format: int64
+          description: Claimed by a consumer and not yet acknowledged. A sustained
+            1 with no progress is a wedged message.
         valuerecommender:
           type: integer
           format: int64
+          description: Waiting to be claimed.
+        valuerecommenderDeadLetter:
+          type: integer
+          format: int64
+          description: "Parked after repeated handling failures. Reported, not fatal\
+            \ - the server keeps serving."
+        valuerecommenderProcessing:
+          type: integer
+          format: int64
+          description: Claimed by a consumer and not yet acknowledged. A sustained
+            1 with no progress is a wedged message.
     RepositoryState:
       type: object
       additionalProperties: false
