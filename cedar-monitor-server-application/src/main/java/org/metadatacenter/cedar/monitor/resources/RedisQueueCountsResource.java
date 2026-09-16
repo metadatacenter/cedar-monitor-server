@@ -27,6 +27,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
@@ -68,11 +69,18 @@ public class RedisQueueCountsResource extends AbstractMonitorResource {
     try (JedisPool pool = new JedisPool(new JedisPoolConfig(), cacheConfig.getConnection().getHost(),
         cacheConfig.getConnection().getPort(), cacheConfig.getConnection().getTimeout());
          Jedis blockingQueue = pool.getResource()) {
-      r.put(SEARCH_PERMISSION_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(SEARCH_PERMISSION_QUEUE_ID)));
-      r.put(NCBI_SUBMISSION_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(NCBI_SUBMISSION_QUEUE_ID)));
-      r.put(APP_LOG_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(APP_LOG_QUEUE_ID)));
-      r.put(VALUERECOMMENDER_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(VALUERECOMMENDER_QUEUE_ID)));
-      r.put(CLONE_INSTANCES_QUEUE_ID, blockingQueue.llen(cacheConfig.getQueueName(CLONE_INSTANCES_QUEUE_ID)));
+      for (String queueId : List.of(SEARCH_PERMISSION_QUEUE_ID, NCBI_SUBMISSION_QUEUE_ID, APP_LOG_QUEUE_ID,
+          VALUERECOMMENDER_QUEUE_ID, CLONE_INSTANCES_QUEUE_ID)) {
+        String queueName = cacheConfig.getQueueName(queueId);
+        // Pending is what the page has always shown. The other two answer questions the runbook
+        // otherwise sends an operator to redis-cli for: processing = 1 with an old message is how a
+        // wedged permission cascade looks, and a non-zero dead-letter depth is now reported by the
+        // worker's health check rather than gating it, so this is where it has to be visible.
+        // Redis names the lists with hyphens; the response keeps the camelCase this API uses.
+        r.put(queueId, blockingQueue.llen(queueName));
+        r.put(queueId + "Processing", blockingQueue.llen(queueName + PROCESSING_SUFFIX));
+        r.put(queueId + "DeadLetter", blockingQueue.llen(queueName + DEAD_LETTER_SUFFIX));
+      }
     }
 
     return Response.ok().entity(r).build();
