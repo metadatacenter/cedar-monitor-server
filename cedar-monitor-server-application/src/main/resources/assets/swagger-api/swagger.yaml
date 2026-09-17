@@ -1693,9 +1693,10 @@ paths:
       - Diagnostics
   /resources/counts:
     get:
-      description: "Report graph, document-store, search-index and Keycloak totals.\
-        \ Document counts are obtained through resource and artifact; a failed count\
-        \ does not become zero."
+      description: "Report graph, document-store, search-index and Keycloak totals,\
+        \ and the drift report that says which of the differences between them are\
+        \ expected. Document counts are obtained through resource and artifact; a\
+        \ failed count does not become zero."
       operationId: resourceCounts
       responses:
         "200":
@@ -3943,6 +3944,104 @@ components:
           type: string
         nativeMethod:
           type: boolean
+    StoreCountDrift:
+      type: object
+      additionalProperties: false
+      description: "One cross-store count rule, applied."
+      properties:
+        authority:
+          type: string
+          description: "The side the expectation is derived from, usually a store."
+        authorityCount:
+          type: integer
+          format: int64
+        compared:
+          type: string
+          description: The side being checked against it.
+        comparedCount:
+          type: integer
+          format: int64
+        drift:
+          type: integer
+          format: int64
+          description: |
+            `comparedCount - expected`. Signed: which way it leans usually says which failure
+            happened. Absent where there is no expectation to subtract from.
+          nullable: true
+        expected:
+          type: integer
+          format: int64
+          description: "What `comparedCount` should be, absent where no exact rule\
+            \ gives it."
+          nullable: true
+        gap:
+          type: integer
+          format: int64
+          description: |
+            `comparedCount - authorityCount`: the raw difference between the two sides, before any
+            rule is applied. Equal to `drift` wherever the rule expects the two sides to match; it
+            matters on a check with no exact expectation, where it is the only figure there is.
+        id:
+          type: string
+          description: "Stable identifier for this rule, for example `folders-opensearch`."
+        label:
+          type: string
+          description: |
+            A few words saying what this check came to, for display without opening the rule -
+            "index in step", "80 orphaned documents", "not checked". Written per check rather than
+            composed from the side names and the number.
+        note:
+          type: string
+          description: "Further reading, present where the result is not a clean pass."
+          nullable: true
+        resourceType:
+          type: string
+          description: The counts page row this belongs to.
+        rule:
+          type: string
+          description: Why the two counts relate the way they do.
+        status:
+          type: string
+          description: |
+            `NOT_CHECKED` is a number reported without a rule applied to it, distinct from
+            `UNVERIFIED`, which is a real comparison no total can settle. It is excluded from
+            `totalChecks`.
+          enum:
+          - OK
+          - DRIFT
+          - UNVERIFIED
+          - UNAVAILABLE
+          - NOT_CHECKED
+    StoreCountDriftReport:
+      type: object
+      additionalProperties: false
+      description: |
+        Each store's count read against another's, with the rule that says what the second one
+        ought to be. Two of the differences on this page are expected and permanent - the search
+        index holds no user home or system folders, and a Keycloak account only becomes a CEDAR
+        user node when someone signs in - so the raw counts alone cannot say which gaps to act on.
+      properties:
+        checks:
+          type: array
+          description: |
+            One entry per row of the counts page, in the order it lists them. Most are verdicts; a
+            `NOT_CHECKED` entry is a number carried for context, with the reasoning for not
+            checking it.
+          items:
+            $ref: "#/components/schemas/StoreCountDrift"
+        driftingChecks:
+          type: integer
+          format: int32
+        totalChecks:
+          type: integer
+          format: int32
+          description: Entries that are actual checks; `NOT_CHECKED` entries are excluded.
+        unavailableChecks:
+          type: integer
+          format: int32
+        unverifiedChecks:
+          type: integer
+          format: int32
     StoreCounts:
       type: object
       additionalProperties: false
@@ -3950,6 +4049,8 @@ components:
         What each store holds, counted store by store so the figures can be read against each other.
         The workspace graph is the authoritative count.
       properties:
+        drift:
+          $ref: "#/components/schemas/StoreCountDriftReport"
         errorPack:
           type: string
           description: "What went wrong reading Keycloak, where it could not be read."
@@ -4001,12 +4102,31 @@ components:
             instance:
               type: integer
               format: int64
+            regularFolder:
+              type: integer
+              format: int64
+              description: |
+                The rest: folders that are neither, which is exactly what the search index holds.
+                Counted in the graph in its own right rather than derived from the other three, so
+                that the parts accounting for the total is a check rather than an identity.
+            systemFolder:
+              type: integer
+              format: int64
+              description: "How many of `folder` are system folders. Also a subset,\
+                \ also never indexed."
             template:
               type: integer
               format: int64
             user:
               type: integer
               format: int64
+            userHomeFolder:
+              type: integer
+              format: int64
+              description: |
+                How many of `folder` are user home folders. A subset of `folder`, not a figure
+                beside it. The search index never holds one, so this is part of what the index is
+                expected to be short by.
         opensearch:
           allOf:
           - $ref: "#/components/schemas/ArtifactCountsByType"
