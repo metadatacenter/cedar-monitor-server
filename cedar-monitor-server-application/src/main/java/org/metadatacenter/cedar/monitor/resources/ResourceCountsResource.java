@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
+import org.metadatacenter.cedar.monitor.counts.StoreCountDriftReport;
 import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
@@ -62,7 +63,9 @@ public class ResourceCountsResource extends AbstractMonitorResource {
   @Timed
   @Path("/counts")
   @Operation(summary = "Compare counts across backing stores",
-      description = "Report graph, document-store, search-index and Keycloak totals. Document counts are obtained through resource and artifact; a failed count does not become zero.")
+      description = "Report graph, document-store, search-index and Keycloak totals, and the drift "
+          + "report that says which of the differences between them are expected. Document counts "
+          + "are obtained through resource and artifact; a failed count does not become zero.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Counts by store and resource kind",
           content = @Content(schema = @Schema(ref = "#/components/schemas/StoreCounts"))),
@@ -79,9 +82,11 @@ public class ResourceCountsResource extends AbstractMonitorResource {
 
     Map<String, Object> r = new HashMap<>();
 
+    ArtifactCounts mongoCounts;
     String countsUrl = cedarConfig.getServers().getResource().getBase() + ArtifactCounts.PATH;
     try (ClassicHttpResponse upstream = ProxyUtil.proxyGet(countsUrl, c, HttpTimeouts.NO_REDIRECT_INTERACTIVE)) {
-      r.put("mongo", ArtifactCounts.read(upstream));
+      mongoCounts = ArtifactCounts.read(upstream);
+      r.put("mongo", mongoCounts);
     } catch (IOException e) {
       throw new CedarDependencyUnavailableException("Artifact counts are unavailable", e);
     }
@@ -105,6 +110,18 @@ public class ResourceCountsResource extends AbstractMonitorResource {
     long folderCount = folderSession.getFolderCount();
     neo4j.put("folder", folderCount);
 
+    // Both are subsets of folderCount, and both are exactly what the search index leaves out
+    // (IndexUtils.needsIndexing). Read here rather than left to the reader: the folder row's
+    // difference is the largest number on this page and the only one that is expected to be large.
+    long userHomeFolderCount = folderSession.getUserHomeFolderCount();
+    neo4j.put("userHomeFolder", userHomeFolderCount);
+    long systemFolderCount = folderSession.getSystemFolderCount();
+    neo4j.put("systemFolder", systemFolderCount);
+    // Counted rather than derived, so that the three parts adding up to folderCount is a check and
+    // not an identity.
+    long regularFolderCount = folderSession.getRegularFolderCount();
+    neo4j.put("regularFolder", regularFolderCount);
+
     Neo4JProxyFilesystemResource fsNeo4JProxy = dataServices.getProxies().filesystemResource();
     long fieldTotalCount = fsNeo4JProxy.getTotalCount(CedarResourceType.FIELD);
     neo4j.put("field", fieldTotalCount);
@@ -118,23 +135,38 @@ public class ResourceCountsResource extends AbstractMonitorResource {
     Map<String, Object> opensearch = new HashMap<>();
     r.put("opensearch", opensearch);
 
-    opensearch.put("field", nodeSearchingService.getTotalCount(CedarResourceType.FIELD));
-    opensearch.put("element", nodeSearchingService.getTotalCount(CedarResourceType.ELEMENT));
-    opensearch.put("template", nodeSearchingService.getTotalCount(CedarResourceType.TEMPLATE));
-    opensearch.put("instance", nodeSearchingService.getTotalCount(CedarResourceType.INSTANCE));
-    opensearch.put("folder", nodeSearchingService.getTotalCount(CedarResourceType.FOLDER));
+    long openSearchFieldCount = nodeSearchingService.getTotalCount(CedarResourceType.FIELD);
+    opensearch.put("field", openSearchFieldCount);
+    long openSearchElementCount = nodeSearchingService.getTotalCount(CedarResourceType.ELEMENT);
+    opensearch.put("element", openSearchElementCount);
+    long openSearchTemplateCount = nodeSearchingService.getTotalCount(CedarResourceType.TEMPLATE);
+    opensearch.put("template", openSearchTemplateCount);
+    long openSearchInstanceCount = nodeSearchingService.getTotalCount(CedarResourceType.INSTANCE);
+    opensearch.put("instance", openSearchInstanceCount);
+    long openSearchFolderCount = nodeSearchingService.getTotalCount(CedarResourceType.FOLDER);
+    opensearch.put("folder", openSearchFolderCount);
 
     Map<String, Object> keycloak = new HashMap<>();
     r.put("keycloak", keycloak);
 
+    Integer keycloakUserCount = null;
     try {
       KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
       Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo);
       RealmResource realm = kc.realm(kcInfo.getKeycloakRealmName());
-      keycloak.put("user", realm.users().count());
+      keycloakUserCount = realm.users().count();
+      keycloak.put("user", keycloakUserCount);
     } catch (Exception e) {
       r.put("errorPack", new CedarProcessingException(e).getMessage());
     }
+
+    r.put("drift", StoreCountDriftReport.of(new StoreCountDriftReport.Snapshot(
+        userCount, folderCount, userHomeFolderCount, systemFolderCount, regularFolderCount,
+        fieldTotalCount, elementTotalCount, templateTotalCount, instanceTotalCount,
+        mongoCounts.field, mongoCounts.element, mongoCounts.template, mongoCounts.instance,
+        openSearchFieldCount, openSearchElementCount, openSearchTemplateCount,
+        openSearchInstanceCount, openSearchFolderCount,
+        keycloakUserCount)));
 
     return Response.ok().entity(r).build();
   }
