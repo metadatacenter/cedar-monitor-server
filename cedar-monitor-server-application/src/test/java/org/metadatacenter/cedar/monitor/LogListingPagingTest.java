@@ -75,6 +75,16 @@ public class LogListingPagingTest {
   private static final HttpClient CLIENT = HttpClient.newHttpClient();
   private static final Instant NOW = Instant.now().truncatedTo(ChronoUnit.SECONDS);
   private static final Instant THIS_HOUR = NOW.truncatedTo(ChronoUnit.HOURS);
+  /**
+   * The hour the usage rows are seeded at, and the range every usage request reads. The server's
+   * log connection fixes its own time zone while this seeder writes in the JVM's, so a seeded hour
+   * can land up to a day away from where it was meant to. Seeding two days back and reading a range
+   * that runs a day either side of that keeps every seeded row inside it whatever the two zones are.
+   */
+  private static final Instant SEED_HOUR = THIS_HOUR.minus(2, ChronoUnit.DAYS);
+  private static final Instant SEED_HOUR_EARLIER = SEED_HOUR.minus(1, ChronoUnit.HOURS);
+  private static final String RANGE =
+      "from=" + SEED_HOUR.minus(1, ChronoUnit.DAYS) + "&to=" + SEED_HOUR.plus(1, ChronoUnit.DAYS);
   private static final List<String> TABLES = List.of("log_request", "log_cypher", "agg_request_outlier",
       "agg_cypher_outlier", "agg_request_hourly", "agg_cypher_hourly", "agg_request_user_hourly");
 
@@ -289,11 +299,11 @@ public class LogListingPagingTest {
   public void endpointsPageByVolumeCountDistinctEndpointsAndKeepTheRange() throws Exception {
     // Seven endpoints in range, each split over two hours so a total must merge rows; one out of range.
     for (int e = 0; e < 7; e++) {
-      seedRequestHourly(THIS_HOUR.minus(2, ChronoUnit.HOURS), "Resource" + e, 10 + e);
-      seedRequestHourly(THIS_HOUR.minus(3, ChronoUnit.HOURS), "Resource" + e, 10);
+      seedRequestHourly(SEED_HOUR, "Resource" + e, 10 + e);
+      seedRequestHourly(SEED_HOUR_EARLIER, "Resource" + e, 10);
     }
     seedRequestHourly(THIS_HOUR.minus(30, ChronoUnit.DAYS), "Ancient", 1_000);
-    String range = "from=" + THIS_HOUR.minus(1, ChronoUnit.DAYS) + "&to=" + THIS_HOUR;
+    String range = RANGE;
 
     JsonNode first = get("/logs/usage/endpoints?limit=3&" + range);
 
@@ -302,8 +312,8 @@ public class LogListingPagingTest {
     assertEquals("Resource6", first.get("endpoints").get(0).get("className").asText());
     assertEquals(26, first.get("endpoints").get(0).get("reqCount").asLong());
     String next = first.get("paging").get("next").asText();
-    assertEquals(THIS_HOUR.minus(1, ChronoUnit.DAYS).toString(), param(next, "from"));
-    assertEquals(THIS_HOUR.toString(), param(next, "to"));
+    assertEquals(SEED_HOUR.minus(1, ChronoUnit.DAYS).toString(), param(next, "from"));
+    assertEquals(SEED_HOUR.plus(1, ChronoUnit.DAYS).toString(), param(next, "to"));
 
     List<JsonNode> walked = walk("/logs/usage/endpoints?limit=3&" + range, "endpoints");
     assertEquals(7, walked.size());
@@ -316,9 +326,9 @@ public class LogListingPagingTest {
   @Test
   public void endpointsWithEqualVolumeStillPageDisjointly() throws Exception {
     for (int e = 0; e < 9; e++) {
-      seedRequestHourly(THIS_HOUR.minus(2, ChronoUnit.HOURS), "Same" + e, 5);
+      seedRequestHourly(SEED_HOUR, "Same" + e, 5);
     }
-    String range = "from=" + THIS_HOUR.minus(1, ChronoUnit.DAYS) + "&to=" + THIS_HOUR;
+    String range = RANGE;
 
     List<JsonNode> walked = walk("/logs/usage/endpoints?limit=2&" + range, "endpoints");
 
@@ -330,9 +340,9 @@ public class LogListingPagingTest {
   @Test
   public void usageDefaultsToFiftyRows() throws Exception {
     for (int e = 0; e < 55; e++) {
-      seedRequestHourly(THIS_HOUR.minus(2, ChronoUnit.HOURS), "Resource" + e, 1);
+      seedRequestHourly(SEED_HOUR, "Resource" + e, 1);
     }
-    String range = "from=" + THIS_HOUR.minus(1, ChronoUnit.DAYS) + "&to=" + THIS_HOUR;
+    String range = RANGE;
 
     JsonNode page = get("/logs/usage/endpoints?" + range);
 
@@ -343,9 +353,9 @@ public class LogListingPagingTest {
   @Test
   public void cypherUsagePagesDistinctStatements() throws Exception {
     for (int i = 0; i < 5; i++) {
-      seedCypherHourly(THIS_HOUR.minus(2, ChronoUnit.HOURS), "hash" + i, 100 - i);
+      seedCypherHourly(SEED_HOUR, "hash" + i, 100 - i);
     }
-    String range = "from=" + THIS_HOUR.minus(1, ChronoUnit.DAYS) + "&to=" + THIS_HOUR;
+    String range = RANGE;
 
     JsonNode page = get("/logs/usage/cypher?limit=2&offset=2&" + range);
 
@@ -357,9 +367,9 @@ public class LogListingPagingTest {
   @Test
   public void userUsagePagesDistinctCallers() throws Exception {
     for (int i = 0; i < 4; i++) {
-      seedUserHourly(THIS_HOUR.minus(2, ChronoUnit.HOURS), "user-" + i, 40 - i);
+      seedUserHourly(SEED_HOUR, "user-" + i, 40 - i);
     }
-    String range = "from=" + THIS_HOUR.minus(1, ChronoUnit.DAYS) + "&to=" + THIS_HOUR;
+    String range = RANGE;
 
     JsonNode page = get("/logs/usage/users?limit=3&" + range);
 
@@ -379,9 +389,9 @@ public class LogListingPagingTest {
   @Test
   public void insightsStillReadTheBreakdowns() throws Exception {
     for (int e = 0; e < 3; e++) {
-      seedRequestHourly(THIS_HOUR.minus(2, ChronoUnit.HOURS), "Resource" + e, 30);
+      seedRequestHourly(SEED_HOUR, "Resource" + e, 30);
     }
-    String range = "from=" + THIS_HOUR.minus(1, ChronoUnit.DAYS) + "&to=" + THIS_HOUR;
+    String range = RANGE;
 
     JsonNode insights = get("/logs/usage/insights?" + range);
 
