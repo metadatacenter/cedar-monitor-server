@@ -4,7 +4,6 @@ import com.codahale.metrics.annotation.Timed;
 import io.dropwizard.hibernate.UnitOfWork;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -13,6 +12,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
+import org.metadatacenter.cedar.monitor.paging.LogPages.CypherStatPage;
+import org.metadatacenter.cedar.monitor.paging.LogPages.EndpointStatPage;
+import org.metadatacenter.cedar.monitor.paging.LogPages.UserStatPage;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.logging.agg.AggQueryResults.CypherStat;
 import org.metadatacenter.server.logging.agg.AggQueryResults.EndpointStat;
@@ -21,6 +23,7 @@ import org.metadatacenter.server.logging.agg.AggQueryResults.UserStat;
 import org.metadatacenter.server.logging.dao.agg.AggregationQueryDAO;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 import org.metadatacenter.util.http.CedarError;
+import org.metadatacenter.util.http.PagedQuery;
 
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -34,6 +37,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Read side of the log aggregation: date-range usage + pattern detection over the {@code agg_*} rollups
@@ -48,6 +52,7 @@ import java.util.Map;
 public class LogUsageResource extends AbstractMonitorResource {
 
   private static final int DEFAULT_LIMIT = 50;
+  private static final int MAX_LIMIT = 500;
   private final AggregationQueryDAO dao;
 
   public LogUsageResource(CedarConfig cedarConfig, AggregationQueryDAO dao) {
@@ -96,8 +101,9 @@ public class LogUsageResource extends AbstractMonitorResource {
           + "`maxNanos` is the largest single handler duration any of them recorded. Requires the monitor "
           + "read permission.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "One row per endpoint, busiest first",
-          content = @Content(array = @ArraySchema(schema = @Schema(implementation = EndpointStat.class)))),
+      @ApiResponse(responseCode = "200", description = "A page of endpoints, busiest first",
+          content = @Content(schema = @Schema(implementation = EndpointStatPage.class))),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The limit or offset is out of range"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read, or a bound was not an ISO-8601 instant")
@@ -108,11 +114,16 @@ public class LogUsageResource extends AbstractMonitorResource {
       @QueryParam("from") String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
       @QueryParam("to") String to,
-      @Parameter(description = "How many rows to return. Defaults to 50 and is capped at 500.")
-      @QueryParam("limit") Integer limit) throws CedarException {
+      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 50.")
+      @QueryParam("limit") Optional<Integer> limit,
+      @Parameter(description = "How many rows to skip. Defaults to 0.")
+      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     Instant[] range = range(from, to);
-    return Response.ok().entity(dao.endpointBreakdown(range[0], range[1], lim(limit))).build();
+    PagedQuery page = page(limit, offset);
+    return Response.ok().entity(new EndpointStatPage(
+        dao.endpointBreakdown(range[0], range[1], page.getLimit(), page.getOffset()),
+        requestUrl(), dao.countEndpoints(range[0], range[1]), page.getLimit(), page.getOffset())).build();
   }
 
   @GET
@@ -126,8 +137,9 @@ public class LogUsageResource extends AbstractMonitorResource {
           + "thousand characters. This route reports statements CEDAR already ran. It does not accept or run "
           + "a query of its own. Requires the monitor read permission.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "One row per distinct statement, most executed first",
-          content = @Content(array = @ArraySchema(schema = @Schema(implementation = CypherStat.class)))),
+      @ApiResponse(responseCode = "200", description = "A page of distinct statements, most executed first",
+          content = @Content(schema = @Schema(implementation = CypherStatPage.class))),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The limit or offset is out of range"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read, or a bound was not an ISO-8601 instant")
@@ -138,11 +150,16 @@ public class LogUsageResource extends AbstractMonitorResource {
       @QueryParam("from") String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
       @QueryParam("to") String to,
-      @Parameter(description = "How many rows to return. Defaults to 50 and is capped at 500.")
-      @QueryParam("limit") Integer limit) throws CedarException {
+      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 50.")
+      @QueryParam("limit") Optional<Integer> limit,
+      @Parameter(description = "How many rows to skip. Defaults to 0.")
+      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     Instant[] range = range(from, to);
-    return Response.ok().entity(dao.cypherBreakdown(range[0], range[1], lim(limit))).build();
+    PagedQuery page = page(limit, offset);
+    return Response.ok().entity(new CypherStatPage(
+        dao.cypherBreakdown(range[0], range[1], page.getLimit(), page.getOffset()),
+        requestUrl(), dao.countCypherStatements(range[0], range[1]), page.getLimit(), page.getOffset())).build();
   }
 
   @GET
@@ -154,8 +171,9 @@ public class LogUsageResource extends AbstractMonitorResource {
           + "busiest first. A caller who used two keys appears once per key. Requires the monitor read "
           + "permission.")
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "One row per caller, busiest first",
-          content = @Content(array = @ArraySchema(schema = @Schema(implementation = UserStat.class)))),
+      @ApiResponse(responseCode = "200", description = "A page of callers, busiest first",
+          content = @Content(schema = @Schema(implementation = UserStatPage.class))),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The limit or offset is out of range"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read, or a bound was not an ISO-8601 instant")
@@ -166,11 +184,16 @@ public class LogUsageResource extends AbstractMonitorResource {
       @QueryParam("from") String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
       @QueryParam("to") String to,
-      @Parameter(description = "How many rows to return. Defaults to 50 and is capped at 500.")
-      @QueryParam("limit") Integer limit) throws CedarException {
+      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 50.")
+      @QueryParam("limit") Optional<Integer> limit,
+      @Parameter(description = "How many rows to skip. Defaults to 0.")
+      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     Instant[] range = range(from, to);
-    return Response.ok().entity(dao.userBreakdown(range[0], range[1], lim(limit))).build();
+    PagedQuery page = page(limit, offset);
+    return Response.ok().entity(new UserStatPage(
+        dao.userBreakdown(range[0], range[1], page.getLimit(), page.getOffset()),
+        requestUrl(), dao.countUsers(range[0], range[1]), page.getLimit(), page.getOffset())).build();
   }
 
   /** Pattern detection: computed in Java from the breakdowns (they are tiny). */
@@ -235,11 +258,14 @@ public class LogUsageResource extends AbstractMonitorResource {
     c.must(c.user()).have(CedarPermission.MONITOR_READ);
   }
 
-  private static int lim(Integer limit) {
-    if (limit == null || limit <= 0) {
-      return DEFAULT_LIMIT;
-    }
-    return Math.min(limit, 500);
+  private static PagedQuery page(Optional<Integer> limit, Optional<Integer> offset) throws CedarException {
+    PagedQuery page = new PagedQuery(DEFAULT_LIMIT, MAX_LIMIT).limit(limit).offset(offset);
+    page.validate();
+    return page;
+  }
+
+  private String requestUrl() {
+    return uriInfo.getRequestUri().toString();
   }
 
   /** Parse from/to ISO-8601 instants; default to the last 7 days. */
