@@ -3070,20 +3070,20 @@ components:
       type: object
       additionalProperties: false
       description: |
-        What became of the most recent rebuild of one index, as the resource server reports it. The
-        Monitor passes this through unchanged.
+        What became of the most recent rebuild of one index, or that none has run since this server
+        started. `deadlineAt` and `overdue` describe a running job and are empty otherwise.
       properties:
         command:
           type: string
+          description: The command that started the job.
           nullable: true
         deadlineAt:
           type: string
           format: date-time
-          description: When a job that says nothing more will be believed to have
-            stopped.
           nullable: true
         failure:
           type: string
+          description: "What went wrong, when the state is FAILED or INTERRUPTED."
           nullable: true
         finishedAt:
           type: string
@@ -3097,6 +3097,9 @@ components:
         progress:
           allOf:
           - $ref: "#/components/schemas/IndexingProgress"
+          description: |
+            How far this job got. Present for a job that is running and for one that has finished,
+            failed or was interrupted; absent for an index no job has run over.
           nullable: true
         startedAt:
           type: string

@@ -3879,20 +3879,21 @@
       "IndexJobStatus" : {
         "type" : "object",
         "additionalProperties" : false,
-        "description" : "What became of the most recent rebuild of one index, as the resource server reports it. The\nMonitor passes this through unchanged.\n",
+        "description" : "What became of the most recent rebuild of one index, or that none has run since this server\nstarted. `deadlineAt` and `overdue` describe a running job and are empty otherwise.\n",
         "properties" : {
           "command" : {
             "type" : "string",
+            "description" : "The command that started the job.",
             "nullable" : true
           },
           "deadlineAt" : {
             "type" : "string",
             "format" : "date-time",
-            "description" : "When a job that says nothing more will be believed to have stopped.",
             "nullable" : true
           },
           "failure" : {
             "type" : "string",
+            "description" : "What went wrong, when the state is FAILED or INTERRUPTED.",
             "nullable" : true
           },
           "finishedAt" : {
@@ -3911,6 +3912,7 @@
             "allOf" : [ {
               "$ref" : "#/components/schemas/IndexingProgress"
             } ],
+            "description" : "How far this job got. Present for a job that is running and for one that has finished,\nfailed or was interrupted; absent for an index no job has run over.\n",
             "nullable" : true
           },
           "startedAt" : {
