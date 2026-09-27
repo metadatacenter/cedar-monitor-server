@@ -3,7 +3,7 @@
   "info" : {
     "description" : "Better Metadata - Better Science\n\nThe monitor server reports on the rest of CEDAR: how deep the work queues are, how much each\nstore holds, whether a given server considers itself healthy, and what artifact a given string\nrefers to.\n\nEverything here is read-only and needs the monitor read permission. The counts are meant to be\nread against each other: the workspace graph is authoritative, and the search index disagreeing\nwith it is how a half-finished reindex shows itself.\n",
     "title" : "CEDAR Monitor Server API",
-    "version" : "2.9.18"
+    "version" : "2.9.19"
   },
   "paths" : {
     "/" : {
@@ -832,9 +832,17 @@
             "format" : "int64"
           }
         }, {
-          "description" : "How many rows to return. Defaults to 100 and is capped at 500.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 100.",
           "in" : "query",
           "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "How many matching rows to skip, from 0 to 10000. Defaults to 0.",
+          "in" : "query",
+          "name" : "offset",
           "schema" : {
             "type" : "integer",
             "format" : "int32"
@@ -845,14 +853,21 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/CypherRow"
-                  }
+                  "$ref" : "#/components/schemas/CypherRowPage"
                 }
               }
             },
-            "description" : "Matching Cypher rows, newest first"
+            "description" : "A page of matching Cypher rows, newest first. Counting stops at 10,500 matches, and countCapped then reports that totalCount is a lower bound"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The limit or offset is out of range"
           },
           "401" : {
             "content" : {
@@ -897,9 +912,17 @@
         "description" : "The Cypher instances the aggregator keeps past the prune, each with its full statement text and bound parameters. This route reports statements CEDAR already ran; it does not accept or run a query of its own. Requires the monitor read permission.",
         "operationId" : "cypherOutliers",
         "parameters" : [ {
-          "description" : "How many rows to return. Defaults to 100 and is capped at 500.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 100.",
           "in" : "query",
           "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "How many rows to skip. Defaults to 0.",
+          "in" : "query",
+          "name" : "offset",
           "schema" : {
             "type" : "integer",
             "format" : "int32"
@@ -910,14 +933,21 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/CypherRow"
-                  }
+                  "$ref" : "#/components/schemas/CypherRowPage"
                 }
               }
             },
-            "description" : "Retained outlier Cypher rows, slowest first"
+            "description" : "A page of retained outlier Cypher rows, slowest first"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The limit or offset is out of range"
           },
           "401" : {
             "content" : {
@@ -970,9 +1000,17 @@
             "enum" : [ "SLOW", "ERROR" ]
           }
         }, {
-          "description" : "How many rows to return. Defaults to 100 and is capped at 500.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 100.",
           "in" : "query",
           "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "How many rows to skip. Defaults to 0.",
+          "in" : "query",
+          "name" : "offset",
           "schema" : {
             "type" : "integer",
             "format" : "int32"
@@ -983,14 +1021,21 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/RequestRow"
-                  }
+                  "$ref" : "#/components/schemas/RequestRowPage"
                 }
               }
             },
-            "description" : "Retained outlier request rows, slowest first"
+            "description" : "A page of retained outlier request rows, slowest first"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The limit or offset is out of range"
           },
           "401" : {
             "content" : {
@@ -1050,9 +1095,17 @@
             "format" : "int64"
           }
         }, {
-          "description" : "How many rows to return. Defaults to 100 and is capped at 500.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 100.",
           "in" : "query",
           "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "How many matching rows to skip, from 0 to 10000. Defaults to 0.",
+          "in" : "query",
+          "name" : "offset",
           "schema" : {
             "type" : "integer",
             "format" : "int32"
@@ -1063,14 +1116,21 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/RequestRow"
-                  }
+                  "$ref" : "#/components/schemas/RequestRowPage"
                 }
               }
             },
-            "description" : "Matching request rows, newest first"
+            "description" : "A page of matching request rows, newest first. Counting stops at 10,500 matches, and countCapped then reports that totalCount is a lower bound"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The limit or offset is out of range"
           },
           "401" : {
             "content" : {
@@ -1376,9 +1436,17 @@
             "type" : "string"
           }
         }, {
-          "description" : "How many rows to return. Defaults to 50 and is capped at 500.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 50.",
           "in" : "query",
           "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "How many rows to skip. Defaults to 0.",
+          "in" : "query",
+          "name" : "offset",
           "schema" : {
             "type" : "integer",
             "format" : "int32"
@@ -1389,14 +1457,21 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/CypherStat"
-                  }
+                  "$ref" : "#/components/schemas/CypherStatPage"
                 }
               }
             },
-            "description" : "One row per distinct statement, most executed first"
+            "description" : "A page of distinct statements, most executed first"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The limit or offset is out of range"
           },
           "401" : {
             "content" : {
@@ -1455,9 +1530,17 @@
             "type" : "string"
           }
         }, {
-          "description" : "How many rows to return. Defaults to 50 and is capped at 500.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 50.",
           "in" : "query",
           "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "How many rows to skip. Defaults to 0.",
+          "in" : "query",
+          "name" : "offset",
           "schema" : {
             "type" : "integer",
             "format" : "int32"
@@ -1468,14 +1551,21 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/EndpointStat"
-                  }
+                  "$ref" : "#/components/schemas/EndpointStatPage"
                 }
               }
             },
-            "description" : "One row per endpoint, busiest first"
+            "description" : "A page of endpoints, busiest first"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The limit or offset is out of range"
           },
           "401" : {
             "content" : {
@@ -1670,9 +1760,17 @@
             "type" : "string"
           }
         }, {
-          "description" : "How many rows to return. Defaults to 50 and is capped at 500.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 50.",
           "in" : "query",
           "name" : "limit",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "description" : "How many rows to skip. Defaults to 0.",
+          "in" : "query",
+          "name" : "offset",
           "schema" : {
             "type" : "integer",
             "format" : "int32"
@@ -1683,14 +1781,21 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/UserStat"
-                  }
+                  "$ref" : "#/components/schemas/UserStatPage"
                 }
               }
             },
-            "description" : "One row per caller, busiest first"
+            "description" : "A page of callers, busiest first"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The limit or offset is out of range"
           },
           "401" : {
             "content" : {
@@ -3194,6 +3299,42 @@
           }
         }
       },
+      "CypherRowPage" : {
+        "type" : "object",
+        "properties" : {
+          "countCapped" : {
+            "type" : "boolean",
+            "description" : "Present and true when counting stopped at a ceiling, so totalCount is a lower bound and no last link is given"
+          },
+          "currentOffset" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "The offset of the first item on this page"
+          },
+          "paging" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string",
+              "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+            },
+            "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+          },
+          "request" : {
+            "$ref" : "#/components/schemas/PageRequest"
+          },
+          "statements" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CypherRow"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "How many items match. A lower bound when countCapped is true"
+          }
+        }
+      },
       "CypherStat" : {
         "type" : "object",
         "properties" : {
@@ -3225,6 +3366,42 @@
           },
           "sample" : {
             "type" : "string"
+          }
+        }
+      },
+      "CypherStatPage" : {
+        "type" : "object",
+        "properties" : {
+          "countCapped" : {
+            "type" : "boolean",
+            "description" : "Present and true when counting stopped at a ceiling, so totalCount is a lower bound and no last link is given"
+          },
+          "currentOffset" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "The offset of the first item on this page"
+          },
+          "paging" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string",
+              "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+            },
+            "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+          },
+          "request" : {
+            "$ref" : "#/components/schemas/PageRequest"
+          },
+          "statements" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CypherStat"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "How many items match. A lower bound when countCapped is true"
           }
         }
       },
@@ -3284,6 +3461,42 @@
           "reqCount" : {
             "type" : "integer",
             "format" : "int64"
+          }
+        }
+      },
+      "EndpointStatPage" : {
+        "type" : "object",
+        "properties" : {
+          "countCapped" : {
+            "type" : "boolean",
+            "description" : "Present and true when counting stopped at a ceiling, so totalCount is a lower bound and no last link is given"
+          },
+          "currentOffset" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "The offset of the first item on this page"
+          },
+          "endpoints" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/EndpointStat"
+            }
+          },
+          "paging" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string",
+              "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+            },
+            "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+          },
+          "request" : {
+            "$ref" : "#/components/schemas/PageRequest"
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "How many items match. A lower bound when countCapped is true"
           }
         }
       },
@@ -4198,6 +4411,20 @@
         "enum" : [ "read", "write", null ],
         "nullable" : true
       },
+      "PageRequest" : {
+        "type" : "object",
+        "description" : "The page that was asked for, after defaults were applied",
+        "properties" : {
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "offset" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
       "QueryResult" : {
         "type" : "object",
         "properties" : {
@@ -4416,6 +4643,42 @@
           },
           "userId" : {
             "type" : "string"
+          }
+        }
+      },
+      "RequestRowPage" : {
+        "type" : "object",
+        "properties" : {
+          "countCapped" : {
+            "type" : "boolean",
+            "description" : "Present and true when counting stopped at a ceiling, so totalCount is a lower bound and no last link is given"
+          },
+          "currentOffset" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "The offset of the first item on this page"
+          },
+          "paging" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string",
+              "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+            },
+            "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+          },
+          "request" : {
+            "$ref" : "#/components/schemas/PageRequest"
+          },
+          "requests" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RequestRow"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "How many items match. A lower bound when countCapped is true"
           }
         }
       },
@@ -5402,6 +5665,42 @@
           },
           "userId" : {
             "type" : "string"
+          }
+        }
+      },
+      "UserStatPage" : {
+        "type" : "object",
+        "properties" : {
+          "countCapped" : {
+            "type" : "boolean",
+            "description" : "Present and true when counting stopped at a ceiling, so totalCount is a lower bound and no last link is given"
+          },
+          "currentOffset" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "The offset of the first item on this page"
+          },
+          "paging" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string",
+              "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+            },
+            "description" : "Links to the first, previous, next and last pages, keyed by relation. A relation with no page is absent"
+          },
+          "request" : {
+            "$ref" : "#/components/schemas/PageRequest"
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "How many items match. A lower bound when countCapped is true"
+          },
+          "users" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/UserStat"
+            }
           }
         }
       },
