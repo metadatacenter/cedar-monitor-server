@@ -87,7 +87,7 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
   public Response getTemplateInfo(
       @Parameter(description = "Identifier of the template to report on.", required = true)
       @QueryParam(PP_ID) String id) throws CedarException {
-    return artifactInfo(id);
+    return artifactInfo(id, org.metadatacenter.model.CedarResourceType.TEMPLATE);
   }
 
   @GET
@@ -109,7 +109,7 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
   public Response getTemplateElementInfo(
       @Parameter(description = "Identifier of the template element to report on.", required = true)
       @QueryParam(PP_ID) String id) throws CedarException {
-    return artifactInfo(id);
+    return artifactInfo(id, org.metadatacenter.model.CedarResourceType.ELEMENT);
   }
 
   @GET
@@ -131,7 +131,7 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
   public Response getTemplateFieldInfo(
       @Parameter(description = "Identifier of the template field to report on.", required = true)
       @QueryParam(PP_ID) String id) throws CedarException {
-    return artifactInfo(id);
+    return artifactInfo(id, org.metadatacenter.model.CedarResourceType.FIELD);
   }
 
   @GET
@@ -153,17 +153,18 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
   public Response getTemplateInstanceInfo(
       @Parameter(description = "Identifier of the template instance to report on.", required = true)
       @QueryParam(PP_ID) String id) throws CedarException {
-    return artifactInfo(id);
+    return artifactInfo(id, org.metadatacenter.model.CedarResourceType.INSTANCE);
   }
 
   /**
    * The gate and the gather, shared by all four routes. The artifact kind is not needed: the
    * identifier is untyped and every store is asked the same question about it.
    */
-  private Response artifactInfo(String id) throws CedarException {
+  private Response artifactInfo(String id, org.metadatacenter.model.CedarResourceType type) throws CedarException {
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);
     c.must(c.user()).have(CedarPermission.MONITOR_READ);
+    id = linkedDataUtil.resolveResourceId(type, id);
 
     Map<String, Object> r = new HashMap<>();
 

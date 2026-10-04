@@ -184,6 +184,30 @@ public class MonitorRoutesAndPermissionsTest {
   }
 
   @Test
+  public void resourceLookupPreservesExplicitIdentitiesAndResolvesTypedSelectors() throws Exception {
+    String selector = "templates/12345678-abcd-1234-abcd-123456789012";
+    CedarConfig config = CedarConfig.getInstance(
+        CedarEnvironmentVariableProvider.getFor(SystemComponent.SERVER_MONITOR));
+    Map<String, String> cases = Map.of(
+        "https://repo.metadatacenter.net/" + selector, "https://repo.metadatacenter.net/" + selector,
+        "https://example.org/" + selector, "https://example.org/" + selector,
+        selector, config.getLinkedDataUtil().resolveResourceId(selector));
+    for (Map.Entry<String, String> entry : cases.entrySet()) {
+      HttpRequest request = HttpRequest.newBuilder()
+          .uri(URI.create("http://localhost:" + SERVER.getLocalPort()
+              + "/command/resource-id-lookup?input=" + URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)))
+          .header("Authorization", adminUserAuthHeader)
+          .GET().build();
+      HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+      Assertions.assertEquals(200, response.statusCode(), response.body());
+      JsonNode result = JsonMapper.STRICT_MAPPER.readTree(response.body());
+      Assertions.assertTrue(result.path("success").asBoolean(), response.body());
+      Assertions.assertEquals(entry.getValue(), result.path("resourceIdString").asText(), response.body());
+      Assertions.assertEquals("inputString", result.path("resourceIdSource").asText(), response.body());
+    }
+  }
+
+  @Test
   public void authorizedDbShareUsesTheIsolatedDao() throws Exception {
     HttpRequest request = HttpRequest.newBuilder()
         .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/logs/db-share"))

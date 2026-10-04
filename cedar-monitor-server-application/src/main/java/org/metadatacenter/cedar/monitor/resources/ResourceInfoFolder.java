@@ -80,7 +80,7 @@ public class ResourceInfoFolder extends AbstractMonitorResource {
 
     Map<String, Object> r = new HashMap<>();
 
-    CedarFolderId fid = CedarFolderId.build(id);
+    CedarFolderId fid = CedarFolderId.build(linkedDataUtil.resolveResourceId(org.metadatacenter.model.CedarResourceType.FOLDER, id));
 
     FolderServiceSession folderSession = dataServices.getFolderServiceSession(c);
     Neo4JProxies proxies = dataServices.getProxies();
