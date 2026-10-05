@@ -14,10 +14,8 @@ import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.metadatacenter.util.http.CedarError;
-import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
-import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.id.CedarUserId;
 import org.metadatacenter.model.CedarResourceType;
 import org.metadatacenter.model.folderserver.basic.FolderServerGroup;
@@ -76,13 +74,15 @@ public class ResourceInfoUser extends AbstractMonitorResource {
       description = "Gather what each store holds about one user into a single answer: the workspace graph's record of it, the counts it can reach in each store, its group memberships, and the Keycloak account behind it. "
           + "Written for diagnosis rather than for an application: the point is to see the stores "
           + "side by side, since a user that behaves oddly usually has one store disagreeing with "
-          + "another. A store that cannot be reached leaves its section null rather than failing the "
-          + "request, and an identifier nothing knows returns an empty answer with 200.")
+          + "another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the "
+          + "section's `unavailable`, rather than failing the request. The graph holds the subject itself, so "
+          + "without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "What each store holds about the user",
           content = @Content(schema = @Schema(ref = "#/components/schemas/UserDiagnosticReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "503", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The graph, which holds the subject itself, could not be read"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getUserInfo(
@@ -152,81 +152,61 @@ public class ResourceInfoUser extends AbstractMonitorResource {
     r.put("opensearch", opensearch);
 
     Map<String, Object> counts2 = new HashMap<>();
-    counts2.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser,
-        ResourceRole.VIEWER));
-    counts2.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser,
-        ResourceRole.VIEWER));
-    counts2.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser,
-        ResourceRole.VIEWER));
-    counts2.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser,
-        ResourceRole.VIEWER));
-    counts2.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser,
-        ResourceRole.VIEWER));
+    counts2.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser, ResourceRole.VIEWER, opensearch));
+    counts2.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser, ResourceRole.VIEWER, opensearch));
+    counts2.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser, ResourceRole.VIEWER, opensearch));
+    counts2.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser, ResourceRole.VIEWER, opensearch));
+    counts2.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser, ResourceRole.VIEWER, opensearch));
 
     opensearch.put("viewerCount", counts2);
 
     Map<String, Object> counts3 = new HashMap<>();
-    counts3.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser,
-        ResourceRole.EDITOR));
-    counts3.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser,
-        ResourceRole.EDITOR));
-    counts3.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser,
-        ResourceRole.EDITOR));
-    counts3.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser,
-        ResourceRole.EDITOR));
-    counts3.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser,
-        ResourceRole.EDITOR));
+    counts3.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser, ResourceRole.EDITOR, opensearch));
+    counts3.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser, ResourceRole.EDITOR, opensearch));
+    counts3.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser, ResourceRole.EDITOR, opensearch));
+    counts3.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser, ResourceRole.EDITOR, opensearch));
+    counts3.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser, ResourceRole.EDITOR, opensearch));
 
     opensearch.put("editorCount", counts3);
 
     Map<String, Object> counts4 = new HashMap<>();
-    counts4.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser,
-        ResourceRole.MANAGER));
-    counts4.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser,
-        ResourceRole.MANAGER));
-    counts4.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser,
-        ResourceRole.MANAGER));
-    counts4.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser,
-        ResourceRole.MANAGER));
-    counts4.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser,
-        ResourceRole.MANAGER));
+    counts4.put("field", getAccessibleSearchIndexDocumentCount(CedarResourceType.FIELD, cedarUser, ResourceRole.MANAGER, opensearch));
+    counts4.put("element", getAccessibleSearchIndexDocumentCount(CedarResourceType.ELEMENT, cedarUser, ResourceRole.MANAGER, opensearch));
+    counts4.put("template", getAccessibleSearchIndexDocumentCount(CedarResourceType.TEMPLATE, cedarUser, ResourceRole.MANAGER, opensearch));
+    counts4.put("templateInstance", getAccessibleSearchIndexDocumentCount(CedarResourceType.INSTANCE, cedarUser, ResourceRole.MANAGER, opensearch));
+    counts4.put("folder", getAccessibleSearchIndexDocumentCount(CedarResourceType.FOLDER, cedarUser, ResourceRole.MANAGER, opensearch));
 
     opensearch.put("managerCount", counts4);
 
 
     Map<String, Object> keycloak = new HashMap<>();
     r.put("keycloak", keycloak);
+    keycloak.put("user", readStore(keycloak, "Keycloak", () -> keycloakUser(uid)));
+  }
 
-    try {
-      KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
-
-      Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo);
+  private UserRepresentation keycloakUser(CedarUserId uid) {
+    KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
+    try (Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo)) {
       String userUUID = linkedDataUtil.getUUID(uid.getId(), CedarResourceType.USER);
       UserResource userResource = kc.realm(kcInfo.getKeycloakRealmName()).users().get(userUUID);
       UserRepresentation userRepresentation = userResource.toRepresentation();
-      List<RoleRepresentation> roleRepresentations = userResource.roles().realmLevel().listEffective();
       List<String> realmRoles = new ArrayList<>();
-      for (RoleRepresentation rr : roleRepresentations) {
+      for (RoleRepresentation rr : userResource.roles().realmLevel().listEffective()) {
         realmRoles.add(rr.getName());
       }
       userRepresentation.setRealmRoles(realmRoles);
-      keycloak.put("user", userRepresentation);
-    } catch (Exception e) {
-      log.error("Error while reading user from Keycloak", e);
-      keycloak.put("user", null);
+      return userRepresentation;
     }
   }
 
+  /** A count the index holds for the user at a role, or -1, with the reason recorded, where it can not say. */
   private long getAccessibleSearchIndexDocumentCount(CedarResourceType resourceType, CedarUser cedarUser,
-                                                     ResourceRole role) {
+                                                     ResourceRole role, Map<String, Object> opensearch) {
     List<String> resourceTypes = new ArrayList<>();
     resourceTypes.add(resourceType.getValue());
-    try {
-      return nodeSearchingService.searchAccessibleResourceCountByUser(resourceTypes, role, cedarUser);
-    } catch (CedarProcessingException e) {
-      log.error("Error while reading accessible document count", e);
-    }
-    return -1;
+    Long count = readStore(opensearch, "OpenSearch",
+        () -> nodeSearchingService.searchAccessibleResourceCountByUser(resourceTypes, role, cedarUser));
+    return count == null ? -1 : count;
   }
 
   private long getAccessibleSearchIndexDocumentCount(Neo4JProxies proxies, CedarResourceType resourceType,

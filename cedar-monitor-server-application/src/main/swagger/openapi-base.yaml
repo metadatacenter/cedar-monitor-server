@@ -366,10 +366,16 @@ components:
       type: object
       description: |
         The OpenSearch document for the resource, as the index holds it. Null where the index has no
-        document, and null as well where OpenSearch could not be read: the failure is logged rather
-        than returned, so the two cases look alike here.
+        document, and null as well where OpenSearch could not be read, which the section's
+        `unavailable` then says.
       nullable: true
       additionalProperties: true
+    StoreUnavailable:
+      type: string
+      description: |
+        Why the store this section reports could not be read. Absent where it was read, so a null
+        value beside it is the store holding nothing, and a null value with it is the store failing
+        to say.
     ArtifactCountsByType:
       type: object
       description: One count per artifact type.
@@ -554,6 +560,8 @@ components:
           properties:
             document:
               $ref: '#/components/schemas/SearchIndexDocument'
+            unavailable:
+              $ref: '#/components/schemas/StoreUnavailable'
           additionalProperties: false
       additionalProperties: false
     FolderDiagnosticReport:
@@ -588,6 +596,8 @@ components:
           properties:
             document:
               $ref: '#/components/schemas/SearchIndexDocument'
+            unavailable:
+              $ref: '#/components/schemas/StoreUnavailable'
           additionalProperties: false
       additionalProperties: false
     GroupDiagnosticReport:
@@ -611,8 +621,8 @@ components:
         searchCedarIds:
           type: array
           description: |
-            Every indexed resource the group appears on. Null where OpenSearch could not be read:
-            the failure is logged rather than returned.
+            Every indexed resource the group appears on. Null where OpenSearch could not be read,
+            which `opensearch.unavailable` then says.
           nullable: true
           items:
             type: string
@@ -630,6 +640,8 @@ components:
               type: string
             managerKey:
               type: string
+            unavailable:
+              $ref: '#/components/schemas/StoreUnavailable'
           additionalProperties: false
       additionalProperties: false
     UserResourceCounts:
@@ -697,7 +709,7 @@ components:
           type: object
           description: |
             How much of each type the search index will return for the user at each role. A count of
-            -1 means OpenSearch could not be read; the failure is logged rather than returned. Read
+            -1 means OpenSearch could not be read, and `unavailable` says why. Read
             against the graph's own count: the two disagreeing is how a stale permission index shows
             itself.
           properties:
@@ -707,6 +719,8 @@ components:
               $ref: '#/components/schemas/UserResourceCounts'
             managerCount:
               $ref: '#/components/schemas/UserResourceCounts'
+            unavailable:
+              $ref: '#/components/schemas/StoreUnavailable'
           additionalProperties: false
         keycloak:
           type: object
@@ -715,9 +729,12 @@ components:
               type: object
               description: |
                 The Keycloak account behind the user, as Keycloak represents it, with its effective
-                realm roles filled in. Null where Keycloak could not be read.
+                realm roles filled in. Null where Keycloak could not be read, which `unavailable`
+                then says.
               nullable: true
               additionalProperties: true
+            unavailable:
+              $ref: '#/components/schemas/StoreUnavailable'
           additionalProperties: false
       additionalProperties: false
 

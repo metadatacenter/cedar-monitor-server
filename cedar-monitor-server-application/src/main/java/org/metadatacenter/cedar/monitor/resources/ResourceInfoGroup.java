@@ -10,10 +10,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.metadatacenter.util.http.CedarError;
-import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
-import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.id.CedarGroupId;
 import org.metadatacenter.model.CedarResourceType;
 import org.metadatacenter.model.folderserver.basic.FolderServerGroup;
@@ -31,7 +29,6 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.metadatacenter.constant.CedarPathParameters.PP_ID;
@@ -62,13 +59,15 @@ public class ResourceInfoGroup extends AbstractMonitorResource {
       description = "Gather what each store holds about one group into a single answer: the workspace graph's record of it and its members. "
           + "Written for diagnosis rather than for an application: the point is to see the stores "
           + "side by side, since a group that behaves oddly usually has one store disagreeing with "
-          + "another. A store that cannot be reached leaves its section null rather than failing the "
-          + "request, and an identifier nothing knows returns an empty answer with 200.")
+          + "another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the "
+          + "section's `unavailable`, rather than failing the request. The graph holds the subject itself, so "
+          + "without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "What each store holds about the group",
           content = @Content(schema = @Schema(ref = "#/components/schemas/GroupDiagnosticReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "503", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The graph, which holds the subject itself, could not be read"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getGroupInfo(
@@ -102,29 +101,18 @@ public class ResourceInfoGroup extends AbstractMonitorResource {
     CedarGroupUsers groupUsers = groupSession.findGroupUsers(gid);
     r.put("groupUsers", groupUsers);
 
-    List<String> allSearchCedarIds = findAllSearchCedarIds(gid);
-    r.put("searchCedarIds", allSearchCedarIds);
-
+    Map<String, Object> opensearch = new HashMap<>();
+    r.put("searchCedarIds", readStore(opensearch, "OpenSearch", () -> nodeSearchingService.findAllCedarIdsForGroup(gid)));
 
     String viewerKey = CedarNodeMaterializedPermissions.getKey(gid.getId(), ResourceRole.VIEWER);
     String editorKey = CedarNodeMaterializedPermissions.getKey(gid.getId(), ResourceRole.EDITOR);
     String managerKey = CedarNodeMaterializedPermissions.getKey(gid.getId(), ResourceRole.MANAGER);
 
-    Map<String, Object> opensearch = new HashMap<>();
     r.put("opensearch", opensearch);
 
     opensearch.put("viewerKey", viewerKey);
     opensearch.put("editorKey", editorKey);
     opensearch.put("managerKey", managerKey);
-  }
-
-  private List<String> findAllSearchCedarIds(CedarGroupId groupId) {
-    try {
-      return nodeSearchingService.findAllCedarIdsForGroup(groupId);
-    } catch (CedarProcessingException e) {
-      log.error("Error while reading accessible document count", e);
-    }
-    return null;
   }
 
 }

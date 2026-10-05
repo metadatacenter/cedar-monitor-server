@@ -1952,7 +1952,7 @@
     },
     "/resource/folders" : {
       "get" : {
-        "description" : "Gather what each store holds about one folder into a single answer: the workspace graph's record of it and its path, its computed permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a folder that behaves oddly usually has one store disagreeing with another. A store that cannot be reached leaves its section null rather than failing the request, and an identifier nothing knows returns an empty answer with 200.",
+        "description" : "Gather what each store holds about one folder into a single answer: the workspace graph's record of it and its path, its computed permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a folder that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
         "operationId" : "getFolderInfo",
         "parameters" : [ {
           "description" : "Identifier of the folder to report on.",
@@ -2003,6 +2003,16 @@
               }
             },
             "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
           }
         },
         "security" : [ {
@@ -2014,7 +2024,7 @@
     },
     "/resource/groups" : {
       "get" : {
-        "description" : "Gather what each store holds about one group into a single answer: the workspace graph's record of it and its members. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a group that behaves oddly usually has one store disagreeing with another. A store that cannot be reached leaves its section null rather than failing the request, and an identifier nothing knows returns an empty answer with 200.",
+        "description" : "Gather what each store holds about one group into a single answer: the workspace graph's record of it and its members. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a group that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
         "operationId" : "getGroupInfo",
         "parameters" : [ {
           "description" : "Identifier of the group to report on.",
@@ -2065,6 +2075,16 @@
               }
             },
             "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
           }
         },
         "security" : [ {
@@ -2076,7 +2096,7 @@
     },
     "/resource/template-elements" : {
       "get" : {
-        "description" : "Gather what each store holds about one template element into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template element that behaves oddly usually has one store disagreeing with another. A store that cannot be reached leaves its section null rather than failing the request, and an identifier nothing knows returns an empty answer with 200.",
+        "description" : "Gather what each store holds about one template element into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template element that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
         "operationId" : "getTemplateElementInfo",
         "parameters" : [ {
           "description" : "Identifier of the template element to report on.",
@@ -2127,6 +2147,16 @@
               }
             },
             "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
           }
         },
         "security" : [ {
@@ -2138,7 +2168,7 @@
     },
     "/resource/template-fields" : {
       "get" : {
-        "description" : "Gather what each store holds about one template field into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template field that behaves oddly usually has one store disagreeing with another. A store that cannot be reached leaves its section null rather than failing the request, and an identifier nothing knows returns an empty answer with 200.",
+        "description" : "Gather what each store holds about one template field into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template field that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
         "operationId" : "getTemplateFieldInfo",
         "parameters" : [ {
           "description" : "Identifier of the template field to report on.",
@@ -2189,6 +2219,16 @@
               }
             },
             "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
           }
         },
         "security" : [ {
@@ -2200,7 +2240,7 @@
     },
     "/resource/template-instances" : {
       "get" : {
-        "description" : "Gather what each store holds about one template instance into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template instance that behaves oddly usually has one store disagreeing with another. A store that cannot be reached leaves its section null rather than failing the request, and an identifier nothing knows returns an empty answer with 200.",
+        "description" : "Gather what each store holds about one template instance into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template instance that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
         "operationId" : "getTemplateInstanceInfo",
         "parameters" : [ {
           "description" : "Identifier of the template instance to report on.",
@@ -2251,6 +2291,16 @@
               }
             },
             "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
           }
         },
         "security" : [ {
@@ -2262,7 +2312,7 @@
     },
     "/resource/templates" : {
       "get" : {
-        "description" : "Gather what each store holds about one template into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template that behaves oddly usually has one store disagreeing with another. A store that cannot be reached leaves its section null rather than failing the request, and an identifier nothing knows returns an empty answer with 200.",
+        "description" : "Gather what each store holds about one template into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
         "operationId" : "getTemplateInfo",
         "parameters" : [ {
           "description" : "Identifier of the template to report on.",
@@ -2313,6 +2363,16 @@
               }
             },
             "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
           }
         },
         "security" : [ {
@@ -2324,7 +2384,7 @@
     },
     "/resource/users" : {
       "get" : {
-        "description" : "Gather what each store holds about one user into a single answer: the workspace graph's record of it, the counts it can reach in each store, its group memberships, and the Keycloak account behind it. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a user that behaves oddly usually has one store disagreeing with another. A store that cannot be reached leaves its section null rather than failing the request, and an identifier nothing knows returns an empty answer with 200.",
+        "description" : "Gather what each store holds about one user into a single answer: the workspace graph's record of it, the counts it can reach in each store, its group memberships, and the Keycloak account behind it. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a user that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
         "operationId" : "getUserInfo",
         "parameters" : [ {
           "description" : "Identifier of the user to report on.",
@@ -2375,6 +2435,16 @@
               }
             },
             "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
           }
         },
         "security" : [ {
@@ -2491,6 +2561,16 @@
               }
             },
             "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "OpenSearch could not be read"
           }
         },
         "security" : [ {
@@ -3028,6 +3108,9 @@
             "properties" : {
               "document" : {
                 "$ref" : "#/components/schemas/SearchIndexDocument"
+              },
+              "unavailable" : {
+                "$ref" : "#/components/schemas/StoreUnavailable"
               }
             }
           },
@@ -3667,6 +3750,9 @@
             "properties" : {
               "document" : {
                 "$ref" : "#/components/schemas/SearchIndexDocument"
+              },
+              "unavailable" : {
+                "$ref" : "#/components/schemas/StoreUnavailable"
               }
             }
           },
@@ -3704,6 +3790,9 @@
               "managerKey" : {
                 "type" : "string"
               },
+              "unavailable" : {
+                "$ref" : "#/components/schemas/StoreUnavailable"
+              },
               "viewerKey" : {
                 "type" : "string"
               }
@@ -3715,7 +3804,7 @@
           },
           "searchCedarIds" : {
             "type" : "array",
-            "description" : "Every indexed resource the group appears on. Null where OpenSearch could not be read:\nthe failure is logged rather than returned.\n",
+            "description" : "Every indexed resource the group appears on. Null where OpenSearch could not be read,\nwhich `opensearch.unavailable` then says.\n",
             "items" : {
               "type" : "string",
               "format" : "uri"
@@ -4888,7 +4977,7 @@
       "SearchIndexDocument" : {
         "type" : "object",
         "additionalProperties" : true,
-        "description" : "The OpenSearch document for the resource, as the index holds it. Null where the index has no\ndocument, and null as well where OpenSearch could not be read: the failure is logged rather\nthan returned, so the two cases look alike here.\n",
+        "description" : "The OpenSearch document for the resource, as the index holds it. Null where the index has no\ndocument, and null as well where OpenSearch could not be read, which the section's\n`unavailable` then says.\n",
         "nullable" : true
       },
       "ServerBuildReport" : {
@@ -5344,6 +5433,10 @@
           }
         }
       },
+      "StoreUnavailable" : {
+        "type" : "string",
+        "description" : "Why the store this section reports could not be read. Absent where it was read, so a null\nvalue beside it is the store holding nothing, and a null value with it is the store failing\nto say.\n"
+      },
       "TableCoverage" : {
         "type" : "object",
         "properties" : {
@@ -5554,10 +5647,13 @@
             "type" : "object",
             "additionalProperties" : false,
             "properties" : {
+              "unavailable" : {
+                "$ref" : "#/components/schemas/StoreUnavailable"
+              },
               "user" : {
                 "type" : "object",
                 "additionalProperties" : true,
-                "description" : "The Keycloak account behind the user, as Keycloak represents it, with its effective\nrealm roles filled in. Null where Keycloak could not be read.\n",
+                "description" : "The Keycloak account behind the user, as Keycloak represents it, with its effective\nrealm roles filled in. Null where Keycloak could not be read, which `unavailable`\nthen says.\n",
                 "nullable" : true
               }
             }
@@ -5602,13 +5698,16 @@
           "opensearch" : {
             "type" : "object",
             "additionalProperties" : false,
-            "description" : "How much of each type the search index will return for the user at each role. A count of\n-1 means OpenSearch could not be read; the failure is logged rather than returned. Read\nagainst the graph's own count: the two disagreeing is how a stale permission index shows\nitself.\n",
+            "description" : "How much of each type the search index will return for the user at each role. A count of\n-1 means OpenSearch could not be read, and `unavailable` says why. Read\nagainst the graph's own count: the two disagreeing is how a stale permission index shows\nitself.\n",
             "properties" : {
               "editorCount" : {
                 "$ref" : "#/components/schemas/UserResourceCounts"
               },
               "managerCount" : {
                 "$ref" : "#/components/schemas/UserResourceCounts"
+              },
+              "unavailable" : {
+                "$ref" : "#/components/schemas/StoreUnavailable"
               },
               "viewerCount" : {
                 "$ref" : "#/components/schemas/UserResourceCounts"

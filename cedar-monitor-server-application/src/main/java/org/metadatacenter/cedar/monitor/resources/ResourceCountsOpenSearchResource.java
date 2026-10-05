@@ -2,7 +2,6 @@ package org.metadatacenter.cedar.monitor.resources;
 
 import com.codahale.metrics.annotation.Timed;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -56,6 +55,7 @@ public class ResourceCountsOpenSearchResource extends AbstractMonitorResource {
           content = @Content(schema = @Schema(ref = "#/components/schemas/SearchIndexCounts"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "503", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "OpenSearch could not be read"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response openSearchCounts() throws CedarException {
@@ -69,14 +69,14 @@ public class ResourceCountsOpenSearchResource extends AbstractMonitorResource {
     Map<String, Object> opensearch = new HashMap<>();
     r.put("opensearch", opensearch);
 
-    opensearch.put("field", nodeSearchingService.getTotalCount(CedarResourceType.FIELD));
-    opensearch.put("element", nodeSearchingService.getTotalCount(CedarResourceType.ELEMENT));
-    opensearch.put("template", nodeSearchingService.getTotalCount(CedarResourceType.TEMPLATE));
-    opensearch.put("instance", nodeSearchingService.getTotalCount(CedarResourceType.INSTANCE));
-    opensearch.put("folder", nodeSearchingService.getTotalCount(CedarResourceType.FOLDER));
+    opensearch.put("field", openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.FIELD)));
+    opensearch.put("element", openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.ELEMENT)));
+    opensearch.put("template", openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.TEMPLATE)));
+    opensearch.put("instance", openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.INSTANCE)));
+    opensearch.put("folder", openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.FOLDER)));
 
-    opensearch.put("artifactTotal", nodeSearchingService.getTotalArtifactCount());
-    opensearch.put("recommenderTotal", nodeSearchingService.getTotalRecommenderCount());
+    opensearch.put("artifactTotal", openSearchCount(() -> nodeSearchingService.getTotalArtifactCount()));
+    opensearch.put("recommenderTotal", openSearchCount(() -> nodeSearchingService.getTotalRecommenderCount()));
 
     return Response.ok().entity(r).build();
   }

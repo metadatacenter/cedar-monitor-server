@@ -6,17 +6,28 @@ import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceResource;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.ServerConfig;
+import org.metadatacenter.exception.CedarDependencyUnavailableException;
 import org.metadatacenter.exception.CedarException;
+import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.model.ServerName;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.util.http.CedarResponse;
 import org.metadatacenter.util.http.ProxyUtil;
+import org.opensearch.OpenSearchStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public abstract class AbstractMonitorResource extends CedarMicroserviceResource {
+
+  private static final Logger log = LoggerFactory.getLogger(AbstractMonitorResource.class);
+
+  /** The key a diagnostic section records an unreadable store under. */
+  protected static final String UNAVAILABLE = "unavailable";
 
 
   public AbstractMonitorResource(CedarConfig cedarConfig) {
@@ -25,6 +36,47 @@ public abstract class AbstractMonitorResource extends CedarMicroserviceResource 
 
   public AbstractMonitorResource(CedarConfig cedarConfig, CedarDataServices dataServices) {
     super(cedarConfig, dataServices);
+  }
+
+  /** One read of a store a diagnostic answer reports on. */
+  @FunctionalInterface
+  protected interface StoreRead<T> {
+    T read() throws Exception;
+  }
+
+  /**
+   * What a store holds, or null with the reason recorded in the section under {@code unavailable}.
+   *
+   * <p>A diagnostic answer puts the stores side by side, so one that cannot be read is a finding
+   * rather than a failed request. It used to leave only the null, which is also what a store holding
+   * nothing gives, so an index that was down read as an artifact that had never been indexed. An
+   * index that answered with an error, a missing one for instance, failed the whole answer with 500.
+   */
+  protected static <T> T readStore(Map<String, Object> section, String store, StoreRead<T> read) {
+    try {
+      return read.read();
+    } catch (Exception e) {
+      log.warn("{} could not be read for a diagnostic answer", store, e);
+      section.put(UNAVAILABLE, store + " could not be read: "
+          + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+      return null;
+    }
+  }
+
+  /**
+   * Reads a count from OpenSearch for an answer that must not be partial. An index that answered
+   * with an error is as unreadable as one that did not answer, and was a 500 where that was a 503.
+   */
+  protected static long openSearchCount(StoreRead<Long> read) throws CedarException {
+    try {
+      return read.read();
+    } catch (CedarException e) {
+      throw e;
+    } catch (OpenSearchStatusException e) {
+      throw new CedarDependencyUnavailableException("OpenSearch could not be read", e);
+    } catch (Exception e) {
+      throw new CedarProcessingException(e);
+    }
   }
 
   /**

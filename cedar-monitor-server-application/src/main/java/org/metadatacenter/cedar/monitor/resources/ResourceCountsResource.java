@@ -14,7 +14,6 @@ import org.metadatacenter.cedar.monitor.counts.StoreCountDriftReport;
 import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
-import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.model.CedarResourceType;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.server.CategoryServiceSession;
@@ -135,15 +134,15 @@ public class ResourceCountsResource extends AbstractMonitorResource {
     Map<String, Object> opensearch = new HashMap<>();
     r.put("opensearch", opensearch);
 
-    long openSearchFieldCount = nodeSearchingService.getTotalCount(CedarResourceType.FIELD);
+    long openSearchFieldCount = openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.FIELD));
     opensearch.put("field", openSearchFieldCount);
-    long openSearchElementCount = nodeSearchingService.getTotalCount(CedarResourceType.ELEMENT);
+    long openSearchElementCount = openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.ELEMENT));
     opensearch.put("element", openSearchElementCount);
-    long openSearchTemplateCount = nodeSearchingService.getTotalCount(CedarResourceType.TEMPLATE);
+    long openSearchTemplateCount = openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.TEMPLATE));
     opensearch.put("template", openSearchTemplateCount);
-    long openSearchInstanceCount = nodeSearchingService.getTotalCount(CedarResourceType.INSTANCE);
+    long openSearchInstanceCount = openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.INSTANCE));
     opensearch.put("instance", openSearchInstanceCount);
-    long openSearchFolderCount = nodeSearchingService.getTotalCount(CedarResourceType.FOLDER);
+    long openSearchFolderCount = openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.FOLDER));
     opensearch.put("folder", openSearchFolderCount);
 
     Map<String, Object> keycloak = new HashMap<>();
@@ -152,12 +151,14 @@ public class ResourceCountsResource extends AbstractMonitorResource {
     Integer keycloakUserCount = null;
     try {
       KeycloakUtilInfo kcInfo = KeycloakUtils.initKeycloak(cedarConfig);
-      Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo);
-      RealmResource realm = kc.realm(kcInfo.getKeycloakRealmName());
-      keycloakUserCount = realm.users().count();
+      try (Keycloak kc = KeycloakUtils.buildKeycloak(kcInfo)) {
+        RealmResource realm = kc.realm(kcInfo.getKeycloakRealmName());
+        keycloakUserCount = realm.users().count();
+      }
       keycloak.put("user", keycloakUserCount);
     } catch (Exception e) {
-      r.put("errorPack", new CedarProcessingException(e).getMessage());
+      // The drift report points here, so the reason is never left null.
+      r.put("errorPack", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
     }
 
     r.put("drift", StoreCountDriftReport.of(new StoreCountDriftReport.Snapshot(

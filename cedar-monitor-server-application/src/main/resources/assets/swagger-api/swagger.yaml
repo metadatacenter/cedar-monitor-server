@@ -1446,9 +1446,11 @@ paths:
         \ the workspace graph's record of it and its path, its computed permissions,\
         \ and the OpenSearch document. Written for diagnosis rather than for an application:\
         \ the point is to see the stores side by side, since a folder that behaves\
-        \ oddly usually has one store disagreeing with another. A store that cannot\
-        \ be reached leaves its section null rather than failing the request, and\
-        \ an identifier nothing knows returns an empty answer with 200."
+        \ oddly usually has one store disagreeing with another. OpenSearch or Keycloak\
+        \ failing to answer leaves its value null and says why under the section's\
+        \ `unavailable`, rather than failing the request. The graph holds the subject\
+        \ itself, so without it the answer is a 503. An identifier nothing knows returns\
+        \ an empty answer with 200."
       operationId: getFolderInfo
       parameters:
       - description: Identifier of the folder to report on.
@@ -1482,6 +1484,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The graph, which holds the subject itself, could not be read"
       security:
       - api_key: []
       summary: Get everything CEDAR knows about a folder
@@ -1493,9 +1501,10 @@ paths:
         \ the workspace graph's record of it and its members. Written for diagnosis\
         \ rather than for an application: the point is to see the stores side by side,\
         \ since a group that behaves oddly usually has one store disagreeing with\
-        \ another. A store that cannot be reached leaves its section null rather than\
-        \ failing the request, and an identifier nothing knows returns an empty answer\
-        \ with 200."
+        \ another. OpenSearch or Keycloak failing to answer leaves its value null\
+        \ and says why under the section's `unavailable`, rather than failing the\
+        \ request. The graph holds the subject itself, so without it the answer is\
+        \ a 503. An identifier nothing knows returns an empty answer with 200."
       operationId: getGroupInfo
       parameters:
       - description: Identifier of the group to report on.
@@ -1529,6 +1538,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The graph, which holds the subject itself, could not be read"
       security:
       - api_key: []
       summary: Get everything CEDAR knows about a group
@@ -1541,9 +1556,10 @@ paths:
         \ report and permissions, and the OpenSearch document. Written for diagnosis\
         \ rather than for an application: the point is to see the stores side by side,\
         \ since a template element that behaves oddly usually has one store disagreeing\
-        \ with another. A store that cannot be reached leaves its section null rather\
-        \ than failing the request, and an identifier nothing knows returns an empty\
-        \ answer with 200."
+        \ with another. OpenSearch or Keycloak failing to answer leaves its value\
+        \ null and says why under the section's `unavailable`, rather than failing\
+        \ the request. The graph holds the subject itself, so without it the answer\
+        \ is a 503. An identifier nothing knows returns an empty answer with 200."
       operationId: getTemplateElementInfo
       parameters:
       - description: Identifier of the template element to report on.
@@ -1577,6 +1593,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The graph, which holds the subject itself, could not be read"
       security:
       - api_key: []
       summary: Get everything CEDAR knows about a template element
@@ -1589,9 +1611,10 @@ paths:
         \ and permissions, and the OpenSearch document. Written for diagnosis rather\
         \ than for an application: the point is to see the stores side by side, since\
         \ a template field that behaves oddly usually has one store disagreeing with\
-        \ another. A store that cannot be reached leaves its section null rather than\
-        \ failing the request, and an identifier nothing knows returns an empty answer\
-        \ with 200."
+        \ another. OpenSearch or Keycloak failing to answer leaves its value null\
+        \ and says why under the section's `unavailable`, rather than failing the\
+        \ request. The graph holds the subject itself, so without it the answer is\
+        \ a 503. An identifier nothing knows returns an empty answer with 200."
       operationId: getTemplateFieldInfo
       parameters:
       - description: Identifier of the template field to report on.
@@ -1625,6 +1648,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The graph, which holds the subject itself, could not be read"
       security:
       - api_key: []
       summary: Get everything CEDAR knows about a template field
@@ -1637,9 +1666,10 @@ paths:
         \ report and permissions, and the OpenSearch document. Written for diagnosis\
         \ rather than for an application: the point is to see the stores side by side,\
         \ since a template instance that behaves oddly usually has one store disagreeing\
-        \ with another. A store that cannot be reached leaves its section null rather\
-        \ than failing the request, and an identifier nothing knows returns an empty\
-        \ answer with 200."
+        \ with another. OpenSearch or Keycloak failing to answer leaves its value\
+        \ null and says why under the section's `unavailable`, rather than failing\
+        \ the request. The graph holds the subject itself, so without it the answer\
+        \ is a 503. An identifier nothing knows returns an empty answer with 200."
       operationId: getTemplateInstanceInfo
       parameters:
       - description: Identifier of the template instance to report on.
@@ -1673,6 +1703,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The graph, which holds the subject itself, could not be read"
       security:
       - api_key: []
       summary: Get everything CEDAR knows about a template instance
@@ -1685,9 +1721,10 @@ paths:
         \ and permissions, and the OpenSearch document. Written for diagnosis rather\
         \ than for an application: the point is to see the stores side by side, since\
         \ a template that behaves oddly usually has one store disagreeing with another.\
-        \ A store that cannot be reached leaves its section null rather than failing\
-        \ the request, and an identifier nothing knows returns an empty answer with\
-        \ 200."
+        \ OpenSearch or Keycloak failing to answer leaves its value null and says\
+        \ why under the section's `unavailable`, rather than failing the request.\
+        \ The graph holds the subject itself, so without it the answer is a 503. An\
+        \ identifier nothing knows returns an empty answer with 200."
       operationId: getTemplateInfo
       parameters:
       - description: Identifier of the template to report on.
@@ -1721,6 +1758,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The graph, which holds the subject itself, could not be read"
       security:
       - api_key: []
       summary: Get everything CEDAR knows about a template
@@ -1733,9 +1776,10 @@ paths:
         \ its group memberships, and the Keycloak account behind it. Written for diagnosis\
         \ rather than for an application: the point is to see the stores side by side,\
         \ since a user that behaves oddly usually has one store disagreeing with another.\
-        \ A store that cannot be reached leaves its section null rather than failing\
-        \ the request, and an identifier nothing knows returns an empty answer with\
-        \ 200."
+        \ OpenSearch or Keycloak failing to answer leaves its value null and says\
+        \ why under the section's `unavailable`, rather than failing the request.\
+        \ The graph holds the subject itself, so without it the answer is a 503. An\
+        \ identifier nothing knows returns an empty answer with 200."
       operationId: getUserInfo
       parameters:
       - description: Identifier of the user to report on.
@@ -1769,6 +1813,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The graph, which holds the subject itself, could not be read"
       security:
       - api_key: []
       summary: Get everything CEDAR knows about a user
@@ -1848,6 +1898,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: Internal server error
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: OpenSearch could not be read
       security:
       - api_key: []
       summary: Count what the search index holds
@@ -2231,6 +2287,8 @@ components:
           properties:
             document:
               $ref: "#/components/schemas/SearchIndexDocument"
+            unavailable:
+              $ref: "#/components/schemas/StoreUnavailable"
         resourceType:
           type: string
           description: The kind the graph recorded for the identifier.
@@ -2902,6 +2960,8 @@ components:
           properties:
             document:
               $ref: "#/components/schemas/SearchIndexDocument"
+            unavailable:
+              $ref: "#/components/schemas/StoreUnavailable"
         resourceType:
           type: string
           enum:
@@ -2933,6 +2993,8 @@ components:
               type: string
             managerKey:
               type: string
+            unavailable:
+              $ref: "#/components/schemas/StoreUnavailable"
             viewerKey:
               type: string
         resourceType:
@@ -2942,8 +3004,8 @@ components:
         searchCedarIds:
           type: array
           description: |
-            Every indexed resource the group appears on. Null where OpenSearch could not be read:
-            the failure is logged rather than returned.
+            Every indexed resource the group appears on. Null where OpenSearch could not be read,
+            which `opensearch.unavailable` then says.
           items:
             type: string
             format: uri
@@ -3954,8 +4016,8 @@ components:
       additionalProperties: true
       description: |
         The OpenSearch document for the resource, as the index holds it. Null where the index has no
-        document, and null as well where OpenSearch could not be read: the failure is logged rather
-        than returned, so the two cases look alike here.
+        document, and null as well where OpenSearch could not be read, which the section's
+        `unavailable` then says.
       nullable: true
     ServerBuildReport:
       type: object
@@ -4343,6 +4405,12 @@ components:
           allOf:
           - $ref: "#/components/schemas/ArtifactCountsByType"
           description: The search index.
+    StoreUnavailable:
+      type: string
+      description: |
+        Why the store this section reports could not be read. Absent where it was read, so a null
+        value beside it is the store holding nothing, and a null value with it is the store failing
+        to say.
     TableCoverage:
       type: object
       properties:
@@ -4506,12 +4574,15 @@ components:
           type: object
           additionalProperties: false
           properties:
+            unavailable:
+              $ref: "#/components/schemas/StoreUnavailable"
             user:
               type: object
               additionalProperties: true
               description: |
                 The Keycloak account behind the user, as Keycloak represents it, with its effective
-                realm roles filled in. Null where Keycloak could not be read.
+                realm roles filled in. Null where Keycloak could not be read, which `unavailable`
+                then says.
               nullable: true
         neo4j:
           type: object
@@ -4545,7 +4616,7 @@ components:
           additionalProperties: false
           description: |
             How much of each type the search index will return for the user at each role. A count of
-            -1 means OpenSearch could not be read; the failure is logged rather than returned. Read
+            -1 means OpenSearch could not be read, and `unavailable` says why. Read
             against the graph's own count: the two disagreeing is how a stale permission index shows
             itself.
           properties:
@@ -4553,6 +4624,8 @@ components:
               $ref: "#/components/schemas/UserResourceCounts"
             managerCount:
               $ref: "#/components/schemas/UserResourceCounts"
+            unavailable:
+              $ref: "#/components/schemas/StoreUnavailable"
             viewerCount:
               $ref: "#/components/schemas/UserResourceCounts"
         resourceType:
