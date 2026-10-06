@@ -95,7 +95,14 @@ public class CommandResource extends AbstractMonitorResource {
     String sanitizedInput = input != null ? input.trim() : "";
     request.put(SANITIZED_INPUT, sanitizedInput);
 
-    CedarFQResourceId resourceId = null;
+    // A complete identity wins over its path: a legacy or foreign host must not
+    // become the configured repository merely because its path is type-qualified.
+    CedarFQResourceId resourceId = CedarFQResourceId.build(sanitizedInput);
+    if (resourceId != null && resourceId.toString().equals(sanitizedInput)) {
+      response.put(RESOURCE_ID_SOURCE, "inputString");
+    } else {
+      resourceId = null;
+    }
     if (resourceId == null) {
       String path = buildPath(sanitizedInput, request, response);
       resourceId = detectResourceIdInPath(path, response);
@@ -159,8 +166,20 @@ public class CommandResource extends AbstractMonitorResource {
     return params;
   }
 
+  private CedarFQResourceId parseResourceSelector(String value) {
+    if (value == null) return null;
+    // Existing diagnostic input also accepts user/group/category IRIs.
+    CedarFQResourceId legacy = CedarFQResourceId.build(value);
+    if (legacy != null) return legacy;
+    try {
+      return CedarFQResourceId.build(linkedDataUtil.resolveResourceId(value.startsWith("/") ? value.substring(1) : value));
+    } catch (jakarta.ws.rs.BadRequestException ignored) {
+      return null;
+    }
+  }
+
   private CedarFQResourceId detectResourceIdInInput(String sanitizedInput, Map<String, Object> response) {
-    CedarFQResourceId resourceId = CedarFQResourceId.build(sanitizedInput);
+    CedarFQResourceId resourceId = parseResourceSelector(sanitizedInput);
     if (resourceId == null) {
       response.put(ERROR_PHASE, "inputParsing");
     }
@@ -169,7 +188,7 @@ public class CommandResource extends AbstractMonitorResource {
 
   private CedarFQResourceId detectResourceIdInPath(String path, Map<String, Object> response) {
     if (path != null) {
-      CedarFQResourceId resourceId = CedarFQResourceId.build(path);
+      CedarFQResourceId resourceId = parseResourceSelector(path);
       if (resourceId == null) {
         response.put(ERROR_PHASE, "pathParsing");
       }
@@ -181,7 +200,7 @@ public class CommandResource extends AbstractMonitorResource {
   private CedarFQResourceId detectResourceIdInQuery(List<NameValuePair> params, Map<String, Object> response) {
     if (params != null) {
       for (NameValuePair pair : params) {
-        CedarFQResourceId resourceId = CedarFQResourceId.build(pair.getValue());
+        CedarFQResourceId resourceId = parseResourceSelector(pair.getValue());
         if (resourceId != null) {
           return resourceId;
         }

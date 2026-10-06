@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -296,7 +297,9 @@ public final class HostInspector {
           log.debug("Skipping a log file that could not be read: {}", path, e);
         }
       }
-    } catch (IOException e) {
+    } catch (IOException | UncheckedIOException e) {
+      // The walk reports a directory it may not enter as an UncheckedIOException, which went
+      // uncaught and failed the whole report with 500.
       report.put("readable", false);
       report.put("error", messageOf(e));
       report.put("files", List.of());

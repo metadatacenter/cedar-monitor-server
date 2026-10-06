@@ -10,11 +10,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.metadatacenter.util.http.CedarError;
-import org.metadatacenter.bridge.CedarDataServices;
 import org.metadatacenter.bridge.PathInfoBuilder;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.exception.CedarException;
-import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.id.*;
 import org.metadatacenter.model.folderserver.basic.FolderServerFolder;
 import org.metadatacenter.rest.context.CedarRequestContext;
@@ -61,13 +59,15 @@ public class ResourceInfoFolder extends AbstractMonitorResource {
       description = "Gather what each store holds about one folder into a single answer: the workspace graph's record of it and its path, its computed permissions, and the OpenSearch document. "
           + "Written for diagnosis rather than for an application: the point is to see the stores "
           + "side by side, since a folder that behaves oddly usually has one store disagreeing with "
-          + "another. A store that cannot be reached leaves its section null rather than failing the "
-          + "request, and an identifier nothing knows returns an empty answer with 200.")
+          + "another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the "
+          + "section's `unavailable`, rather than failing the request. The graph holds the subject itself, so "
+          + "without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "What each store holds about the folder",
           content = @Content(schema = @Schema(ref = "#/components/schemas/FolderDiagnosticReport"))),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
+      @ApiResponse(responseCode = "503", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The graph, which holds the subject itself, could not be read"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getFolderInfo(
@@ -80,7 +80,7 @@ public class ResourceInfoFolder extends AbstractMonitorResource {
 
     Map<String, Object> r = new HashMap<>();
 
-    CedarFolderId fid = CedarFolderId.build(id);
+    CedarFolderId fid = CedarFolderId.build(linkedDataUtil.resolveResourceId(org.metadatacenter.model.CedarResourceType.FOLDER, id));
 
     FolderServiceSession folderSession = dataServices.getFolderServiceSession(c);
     Neo4JProxies proxies = dataServices.getProxies();
@@ -124,13 +124,7 @@ public class ResourceInfoFolder extends AbstractMonitorResource {
     Map<String, Object> opensearch = new HashMap<>();
     r.put("opensearch", opensearch);
 
-    Map<String, Object> document = null;
-    try {
-      document = nodeSearchingService.getDocumentByCedarId(foid);
-    } catch (CedarProcessingException e) {
-      log.error("Error while reading folder from elasticsearch", e);
-    }
-    opensearch.put("document", document);
+    opensearch.put("document", readStore(opensearch, "OpenSearch", () -> nodeSearchingService.getDocumentByCedarId(foid)));
   }
 
 }
