@@ -13,6 +13,7 @@ import org.metadatacenter.model.ServerName;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.util.http.CedarResponse;
 import org.metadatacenter.util.http.ProxyUtil;
+import org.metadatacenter.util.http.ResponseRelay;
 import org.opensearch.OpenSearchStatusException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,16 +144,8 @@ public abstract class AbstractMonitorResource extends CedarMicroserviceResource 
 
   /** Pass the other server's status and body through unchanged, whatever they were. */
   private Response render(String server, ClassicHttpResponse proxyResponse) {
-    ProxyUtil.proxyResponseHeaders(proxyResponse, response);
-    HttpEntity entity = proxyResponse.getEntity();
-    int statusCode = proxyResponse.getCode();
-    if (entity == null) {
-      return Response.status(statusCode).build();
-    }
-    String mediaType = entity.getContentType();
-    try {
-      String content = new String(entity.getContent().readAllBytes(), StandardCharsets.UTF_8);
-      return Response.status(statusCode).type(mediaType).entity(content).build();
+    try (proxyResponse) {
+      return ResponseRelay.responseBuilder(proxyResponse).build();
     } catch (IOException e) {
       return CedarResponse.internalServerError()
           .message("Error while reading the response of " + server)
