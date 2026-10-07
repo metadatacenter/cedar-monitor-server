@@ -3,7 +3,7 @@
   "info" : {
     "description" : "Better Metadata - Better Science\n\nFolders and artifacts use type-qualified selectors: `folders/<uuid>`, `templates/<uuid>`,\n`template-elements/<uuid>`, `template-fields/<uuid>`, or `template-instances/<uuid>`.\nTyped routes include the type once, for example `/templates/<uuid>`. Query parameters and\ncommand-body selectors retain the type, including folder parameters. Percent-encoded full\nIRIs remain accepted for compatibility. Stored document identities and references remain\nfull IRIs; legacy repository hosts must remain absolute until their data is migrated.\n\nThe monitor server reports on the rest of CEDAR: how deep the work queues are, how much each\nstore holds, whether a given server considers itself healthy, and what artifact a given string\nrefers to.\n\nEverything here is read-only and needs the monitor read permission. The counts are meant to be\nread against each other: the workspace graph is authoritative, and the search index disagreeing\nwith it is how a half-finished reindex shows itself.\n",
     "title" : "CEDAR Monitor Server API",
-    "version" : "2.9.23-SNAPSHOT"
+    "version" : "2.9.23"
   },
   "paths" : {
     "/" : {
