@@ -18,7 +18,7 @@ info:
     read against each other: the workspace graph is authoritative, and the search index disagreeing
     with it is how a half-finished reindex shows itself.
   title: CEDAR Monitor Server API
-  version: 2.9.23-SNAPSHOT
+  version: 2.9.24-SNAPSHOT
 paths:
   /:
     get:
