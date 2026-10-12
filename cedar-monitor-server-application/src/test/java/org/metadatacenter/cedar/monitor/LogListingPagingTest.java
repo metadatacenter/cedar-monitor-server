@@ -7,6 +7,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
+import io.dropwizard.hibernate.HibernateBundle;
+import java.lang.reflect.Field;
+import java.sql.SQLException;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
@@ -86,16 +90,20 @@ public class LogListingPagingTest {
   private static final String RANGE =
       "from=" + SEED_HOUR.minus(1, ChronoUnit.DAYS) + "&to=" + SEED_HOUR.plus(1, ChronoUnit.DAYS);
   private static final List<String> TABLES = List.of("log_request", "log_cypher", "agg_request_outlier",
-      "agg_cypher_outlier", "agg_request_hourly", "agg_cypher_hourly", "agg_request_user_hourly");
+      "agg_cypher_outlier", "agg_request_hourly", "agg_cypher_hourly", "agg_request_user_hourly", "agg_cypher_query_catalog", "log_event_receipt");
 
   private static String adminAuthHeader;
   private static String jdbcUrl;
+  private static HibernateBundle<?> persistenceBundle;
 
   @BeforeAll
   public static void oneTimeSetUp() throws Exception {
     // Another class in this JVM may have replaced the environment override; restore ours.
     redirectEnvironment();
     SERVER.before();
+    Field bundle = MonitorServerApplication.class.getDeclaredField("hibernate");
+    bundle.setAccessible(true);
+    persistenceBundle = (HibernateBundle<?>) bundle.get(SERVER.getApplication());
     Map<String, String> environment = CedarEnvironmentVariableProvider.getFor(SystemComponent.SERVER_MONITOR);
     CedarConfig cedarConfig = CedarConfig.getInstance(environment);
     TestAuthUtil.installInMemoryUserService(cedarConfig);
@@ -115,6 +123,15 @@ public class LogListingPagingTest {
       for (String table : TABLES) {
         s.execute("DELETE FROM " + table);
       }
+    }
+  }
+
+  /** Reuses this server/database startup and the outer per-case table cleanup. */
+  @Nested
+  class Persistence extends LogPersistenceCases {
+    @Override protected HibernateBundle<?> hibernate() { return persistenceBundle; }
+    @Override protected Connection connect() throws SQLException {
+      return DriverManager.getConnection(jdbcUrl, "root", "");
     }
   }
 
