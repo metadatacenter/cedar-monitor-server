@@ -70,6 +70,12 @@ public class LogListingPagingTest {
     ports.put("CEDAR_ARTIFACT_SERVER_HOST", "127.0.0.1");
     ports.put("CEDAR_ARTIFACT_HTTP_PORT", "1");
     ports.put("CEDAR_ARTIFACT_ADMIN_PORT", "1");
+    // The log routes read only the log database. The graph and OpenSearch are dead ports, so the
+    // suite cannot come to depend on whatever the developer has running.
+    ports.put("CEDAR_NEO4J_HOST", "127.0.0.1");
+    ports.put("CEDAR_NEO4J_BOLT_PORT", "1");
+    ports.put("CEDAR_OPENSEARCH_HOST", "127.0.0.1");
+    ports.put("CEDAR_OPENSEARCH_REST_PORT", "1");
     EmbeddedCedarMySql.startAndRedirectEnvironment("CEDAR_LOG_MYSQL", ports);
   }
 

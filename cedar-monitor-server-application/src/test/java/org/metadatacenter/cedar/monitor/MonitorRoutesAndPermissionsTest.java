@@ -16,6 +16,8 @@ import org.metadatacenter.server.logging.dao.query.LogQueryDAO;
 import org.metadatacenter.server.logging.query.LogQueryResults.QueryResult;
 import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceIndexResource;
+import org.metadatacenter.util.test.EmbeddedCedarMySql;
+import org.metadatacenter.util.test.EmbeddedCedarNeo4j;
 import org.metadatacenter.util.test.RouteSurface;
 import org.metadatacenter.util.test.TestAuthUtil;
 
@@ -53,8 +55,9 @@ import static org.mockito.Mockito.when;
  * </ul>
  *
  * <p>The admin case deliberately asserts only that the request is neither 401 nor 403: monitor
- * endpoints read OpenSearch, Redis and the graph, none of which run in this backend-free test, so
- * the response after the gate is expected to be an error rather than 200.
+ * endpoints read OpenSearch, Redis and the graph, and OpenSearch and Redis are dead ports here, so
+ * the response after the gate may be an error rather than 200. The graph and the log database are
+ * embedded.
  */
 public class MonitorRoutesAndPermissionsTest {
 
@@ -79,7 +82,13 @@ public class MonitorRoutesAndPermissionsTest {
     environment.put("CEDAR_ARTIFACT_SERVER_HOST", "127.0.0.1");
     environment.put("CEDAR_ARTIFACT_HTTP_PORT", "1");
     environment.put("CEDAR_ARTIFACT_ADMIN_PORT", "1");
+    // The graph and the log database are embedded, and OpenSearch is a dead port, so no route reads
+    // the developer's stores and the suite's result does not depend on what is running here.
+    environment.put("CEDAR_OPENSEARCH_HOST", "127.0.0.1");
+    environment.put("CEDAR_OPENSEARCH_REST_PORT", "1");
     CedarEnvironmentSource.setOverride(environment);
+    EmbeddedCedarMySql.startAndRedirectEnvironment("CEDAR_LOG_MYSQL", Map.of());
+    EmbeddedCedarNeo4j.startAndRedirectEnvironment();
   }
 
   private static final DropwizardTestSupport<MonitorServerConfiguration> SERVER =

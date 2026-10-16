@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
+import org.metadatacenter.util.test.EmbeddedCedarMySql;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -29,7 +30,15 @@ public class MonitorServerApplicationSmokeTest {
     environment.put("CEDAR_MONITOR_HTTP_PORT", "0");
     environment.put("CEDAR_MONITOR_ADMIN_PORT", "0");
     environment.put("CEDAR_MONITOR_STOP_PORT", "0");
+    // Startup opens the log database, so that is embedded. The graph and OpenSearch are dead ports:
+    // nothing here should reach them, and if something starts to, it fails here rather than reading
+    // whatever the developer has running.
+    environment.put("CEDAR_NEO4J_HOST", "127.0.0.1");
+    environment.put("CEDAR_NEO4J_BOLT_PORT", "1");
+    environment.put("CEDAR_OPENSEARCH_HOST", "127.0.0.1");
+    environment.put("CEDAR_OPENSEARCH_REST_PORT", "1");
     CedarEnvironmentSource.setOverride(environment);
+    EmbeddedCedarMySql.startAndRedirectEnvironment("CEDAR_LOG_MYSQL", Map.of());
   }
 
   private static final DropwizardTestSupport<MonitorServerConfiguration> SERVER =
