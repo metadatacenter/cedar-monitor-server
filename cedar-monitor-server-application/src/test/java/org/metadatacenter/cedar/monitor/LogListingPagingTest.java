@@ -6,6 +6,7 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
 import io.dropwizard.hibernate.HibernateBundle;
@@ -53,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * links a client follows, the filters those links must carry, the refusals, and the ceiling the raw
  * logs count to.
  */
+@Tag("integration")
 public class LogListingPagingTest {
 
   static {

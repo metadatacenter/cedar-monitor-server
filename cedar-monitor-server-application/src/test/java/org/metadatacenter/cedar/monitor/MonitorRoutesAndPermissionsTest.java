@@ -7,6 +7,7 @@ import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
@@ -59,6 +60,7 @@ import static org.mockito.Mockito.when;
  * the response after the gate may be an error rather than 200. The graph and the log database are
  * embedded.
  */
+@Tag("integration")
 public class MonitorRoutesAndPermissionsTest {
 
   private static final LogQueryDAO LOG_QUERY_DAO = mock(LogQueryDAO.class);
