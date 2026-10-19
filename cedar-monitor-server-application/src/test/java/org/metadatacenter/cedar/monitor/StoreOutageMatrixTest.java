@@ -8,6 +8,7 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -64,6 +65,7 @@ import java.util.stream.Stream;
  * count must be 503 whenever the index cannot say. Keycloak never answers here, since its address
  * is on a host that does not resolve, so the user's Keycloak section must say so too.
  */
+@Tag("integration")
 public class StoreOutageMatrixTest {
 
   /** How the stub OpenSearch answers. */

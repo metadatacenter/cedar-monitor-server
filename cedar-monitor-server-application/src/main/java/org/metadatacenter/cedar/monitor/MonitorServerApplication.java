@@ -15,6 +15,7 @@ import org.metadatacenter.server.logging.dao.agg.LogExplorerDAO;
 import org.metadatacenter.server.logging.dao.query.LogQueryDAO;
 import org.metadatacenter.server.logging.dbmodel.ApplicationCypherLog;
 import org.metadatacenter.server.logging.dbmodel.ApplicationRequestLog;
+import org.metadatacenter.server.logging.dbmodel.ApplicationLogReceipt;
 import org.metadatacenter.server.logging.dbmodel.agg.AggCypherHourly;
 import org.metadatacenter.server.logging.dbmodel.agg.AggCypherOutlier;
 import org.metadatacenter.server.logging.dbmodel.agg.AggCypherQueryCatalog;
@@ -49,6 +50,7 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
         cedarConfig.getDBLoggingConfig(),
         ApplicationRequestLog.class, new Class[]{
         ApplicationCypherLog.class,
+        ApplicationLogReceipt.class,
         AggRequestHourly.class,
         AggCypherHourly.class,
         AggRequestUserHourly.class,

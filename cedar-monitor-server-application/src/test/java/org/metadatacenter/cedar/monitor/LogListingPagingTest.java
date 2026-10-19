@@ -6,7 +6,12 @@ import io.dropwizard.testing.ResourceHelpers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Nested;
+import io.dropwizard.hibernate.HibernateBundle;
+import java.lang.reflect.Field;
+import java.sql.SQLException;
 import org.metadatacenter.config.CedarConfig;
 import org.metadatacenter.config.environment.CedarEnvironmentSource;
 import org.metadatacenter.config.environment.CedarEnvironmentVariableProvider;
@@ -49,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * links a client follows, the filters those links must carry, the refusals, and the ceiling the raw
  * logs count to.
  */
+@Tag("integration")
 public class LogListingPagingTest {
 
   static {
@@ -66,6 +72,12 @@ public class LogListingPagingTest {
     ports.put("CEDAR_ARTIFACT_SERVER_HOST", "127.0.0.1");
     ports.put("CEDAR_ARTIFACT_HTTP_PORT", "1");
     ports.put("CEDAR_ARTIFACT_ADMIN_PORT", "1");
+    // The log routes read only the log database. The graph and OpenSearch are dead ports, so the
+    // suite cannot come to depend on whatever the developer has running.
+    ports.put("CEDAR_NEO4J_HOST", "127.0.0.1");
+    ports.put("CEDAR_NEO4J_BOLT_PORT", "1");
+    ports.put("CEDAR_OPENSEARCH_HOST", "127.0.0.1");
+    ports.put("CEDAR_OPENSEARCH_REST_PORT", "1");
     EmbeddedCedarMySql.startAndRedirectEnvironment("CEDAR_LOG_MYSQL", ports);
   }
 
@@ -86,16 +98,20 @@ public class LogListingPagingTest {
   private static final String RANGE =
       "from=" + SEED_HOUR.minus(1, ChronoUnit.DAYS) + "&to=" + SEED_HOUR.plus(1, ChronoUnit.DAYS);
   private static final List<String> TABLES = List.of("log_request", "log_cypher", "agg_request_outlier",
-      "agg_cypher_outlier", "agg_request_hourly", "agg_cypher_hourly", "agg_request_user_hourly");
+      "agg_cypher_outlier", "agg_request_hourly", "agg_cypher_hourly", "agg_request_user_hourly", "agg_cypher_query_catalog", "log_event_receipt");
 
   private static String adminAuthHeader;
   private static String jdbcUrl;
+  private static HibernateBundle<?> persistenceBundle;
 
   @BeforeAll
   public static void oneTimeSetUp() throws Exception {
     // Another class in this JVM may have replaced the environment override; restore ours.
     redirectEnvironment();
     SERVER.before();
+    Field bundle = MonitorServerApplication.class.getDeclaredField("hibernate");
+    bundle.setAccessible(true);
+    persistenceBundle = (HibernateBundle<?>) bundle.get(SERVER.getApplication());
     Map<String, String> environment = CedarEnvironmentVariableProvider.getFor(SystemComponent.SERVER_MONITOR);
     CedarConfig cedarConfig = CedarConfig.getInstance(environment);
     TestAuthUtil.installInMemoryUserService(cedarConfig);
@@ -115,6 +131,15 @@ public class LogListingPagingTest {
       for (String table : TABLES) {
         s.execute("DELETE FROM " + table);
       }
+    }
+  }
+
+  /** Reuses this server/database startup and the outer per-case table cleanup. */
+  @Nested
+  class Persistence extends LogPersistenceCases {
+    @Override protected HibernateBundle<?> hibernate() { return persistenceBundle; }
+    @Override protected Connection connect() throws SQLException {
+      return DriverManager.getConnection(jdbcUrl, "root", "");
     }
   }
 
