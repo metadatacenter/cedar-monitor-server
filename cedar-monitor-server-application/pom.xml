@@ -28,11 +28,6 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.httpcomponents.client5</groupId>
-      <artifactId>httpclient5</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>org.metadatacenter</groupId>
       <artifactId>cedar-config-library</artifactId>
     </dependency>
@@ -63,11 +58,6 @@
     </dependency>
 
     <dependency>
-      <groupId>org.metadatacenter</groupId>
-      <artifactId>cedar-valuerecommender-operations-library</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-healthchecks</artifactId>
     </dependency>
@@ -80,11 +70,6 @@
     <dependency>
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-annotation</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>io.dropwizard</groupId>
-      <artifactId>dropwizard-lifecycle</artifactId>
     </dependency>
 
     <dependency>
@@ -101,11 +86,6 @@
     <dependency>
       <groupId>com.mysql</groupId>
       <artifactId>mysql-connector-j</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.javassist</groupId>
-      <artifactId>javassist</artifactId>
     </dependency>
 
     <dependency>
