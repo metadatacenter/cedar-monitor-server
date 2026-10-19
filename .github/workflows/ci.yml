@@ -191,7 +191,7 @@ jobs:
           restore-keys: maven-${{ runner.os }}-
 
       - name: Run Maven tests
-        run: ./mvnw --batch-mode --no-transfer-progress --update-snapshots test --settings .m2/nexus-settings.xml
+        run: ./mvnw --batch-mode --no-transfer-progress --update-snapshots test jacoco:report --settings .m2/nexus-settings.xml
 
       - name: Verify generated OpenAPI is committed
         run: |
@@ -212,4 +212,14 @@ jobs:
         with:
           name: surefire-reports
           path: "**/target/surefire-reports/**"
+          if-no-files-found: warn
+
+      # cedar-parent attaches JaCoCo to every test run, and each module that ran tests writes a
+      # report: target/site/jacoco for Surefire suites and target/site/jacoco-it for Failsafe ones.
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-reports
+          path: "**/target/site/jacoco*/**"
           if-no-files-found: warn
