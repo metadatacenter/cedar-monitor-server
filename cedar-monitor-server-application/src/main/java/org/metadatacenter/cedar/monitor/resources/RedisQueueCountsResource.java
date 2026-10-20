@@ -49,7 +49,7 @@ public class RedisQueueCountsResource extends AbstractMonitorResource {
   @Timed
   @Path("/queue-counts")
   @Operation(summary = "Get the depth of each work queue",
-      description = "Report how many items are waiting in each of CEDAR's Redis queues: search permissions, NCBI submissions, application logs, value recommender, and instance cloning. A queue that keeps growing is the sign that whatever drains it has stopped.")
+      description = "Report how many items are waiting in each of CEDAR's Redis queues: search permissions, application logs and instance cloning. A queue that keeps growing is the sign that whatever drains it has stopped.")
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "A count per queue",
           content = @Content(schema = @Schema(ref = "#/components/schemas/QueueDepths"))),
@@ -69,8 +69,7 @@ public class RedisQueueCountsResource extends AbstractMonitorResource {
     try (JedisPool pool = new JedisPool(new JedisPoolConfig(), cacheConfig.getConnection().getHost(),
         cacheConfig.getConnection().getPort(), cacheConfig.getConnection().getTimeout());
          Jedis blockingQueue = pool.getResource()) {
-      for (String queueId : List.of(SEARCH_PERMISSION_QUEUE_ID, NCBI_SUBMISSION_QUEUE_ID, APP_LOG_QUEUE_ID,
-          VALUERECOMMENDER_QUEUE_ID, CLONE_INSTANCES_QUEUE_ID)) {
+      for (String queueId : List.of(SEARCH_PERMISSION_QUEUE_ID, APP_LOG_QUEUE_ID, CLONE_INSTANCES_QUEUE_ID)) {
         String queueName = cacheConfig.getQueueName(queueId);
         // Pending is what the page has always shown. The other two answer questions the runbook
         // otherwise sends an operator to redis-cli for: processing = 1 with an old message is how a

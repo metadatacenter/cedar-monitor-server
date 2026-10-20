@@ -1163,18 +1163,6 @@ components:
           type: integer
           format: int64
           description: Parked after repeated handling failures. Reported, not fatal - the server keeps serving.
-        ncbiSubmission:
-          type: integer
-          format: int64
-          description: Waiting to be claimed.
-        ncbiSubmissionProcessing:
-          type: integer
-          format: int64
-          description: Claimed by a consumer and not yet acknowledged. A sustained 1 with no progress is a wedged message.
-        ncbiSubmissionDeadLetter:
-          type: integer
-          format: int64
-          description: Parked after repeated handling failures. Reported, not fatal - the server keeps serving.
         appLog:
           type: integer
           format: int64
@@ -1184,18 +1172,6 @@ components:
           format: int64
           description: Claimed by a consumer and not yet acknowledged. A sustained 1 with no progress is a wedged message.
         appLogDeadLetter:
-          type: integer
-          format: int64
-          description: Parked after repeated handling failures. Reported, not fatal - the server keeps serving.
-        valuerecommender:
-          type: integer
-          format: int64
-          description: Waiting to be claimed.
-        valuerecommenderProcessing:
-          type: integer
-          format: int64
-          description: Claimed by a consumer and not yet acknowledged. A sustained 1 with no progress is a wedged message.
-        valuerecommenderDeadLetter:
           type: integer
           format: int64
           description: Parked after repeated handling failures. Reported, not fatal - the server keeps serving.
@@ -1420,10 +1396,6 @@ components:
               type: integer
               format: int64
               description: Every artifact document, whatever its type.
-            recommenderTotal:
-              type: integer
-              format: int64
-              description: Every document in the value recommender's own index.
           additionalProperties: false
       additionalProperties: false
 
