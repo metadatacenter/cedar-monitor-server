@@ -120,6 +120,25 @@
       <scope>test</scope>
     </dependency>
 
+    <!--
+      The queue-service test fixture - a real Redis on a free port - shared from the library that
+      owns the queue services, for the worker-lag route, which reads the application log queue's
+      depth. Test-scope dependencies are not transitive, so the embedded server is declared
+      alongside it; both versions come from cedar-parent.
+    -->
+    <dependency>
+      <groupId>org.metadatacenter</groupId>
+      <artifactId>cedar-queue-operations-library</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.codemonstur</groupId>
+      <artifactId>embedded-redis</artifactId>
+      <scope>test</scope>
+    </dependency>
+
     <!-- OpenAPI annotations on the resource classes. Version managed in cedar-parent. -->
     <dependency>
       <groupId>io.swagger.core.v3</groupId>
