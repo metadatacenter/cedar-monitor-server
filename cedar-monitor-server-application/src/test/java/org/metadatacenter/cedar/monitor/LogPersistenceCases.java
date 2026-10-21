@@ -100,7 +100,7 @@ abstract class LogPersistenceCases {
     assertEquals(3_000_000_000L, scalar("SELECT handlerDuration FROM log_request"), "raw completion arrived");
     long duration = scalar("SELECT SUM(sumHandlerNanos) FROM agg_request_hourly");
     long errors = scalar("SELECT SUM(errorCount) FROM agg_request_hourly");
-    agg.pruneRequests(TO, 10);
+    prune(agg, true, TO);
     assertAll(
         () -> assertEquals(3_000_000_000L, duration, "completed duration must reach rollup"),
         () -> assertEquals(1, errors, "503 must reach error count"),
@@ -170,7 +170,7 @@ abstract class LogPersistenceCases {
       long remaining = aggregate(ordinary, request);
       long counted = scalar("SELECT SUM(" + countColumn(request) + ") FROM " + rollupTable(request));
       long marked = scalar("SELECT COUNT(*) FROM " + rawTable(request) + " WHERE aggregatedAt IS NOT NULL");
-      int pruned = prune(ordinary, request, TO);
+      long pruned = prune(ordinary, request, TO);
       assertAll(
           () -> assertEquals(1, remaining, "the delayed row must be picked up by the next batch"),
           () -> assertEquals(2, counted, "both committed rows must be counted before removal"),
@@ -214,13 +214,14 @@ abstract class LogPersistenceCases {
     assertEquals(1, scalar("SELECT SUM(" + countColumn(request) + ") FROM " + rollupTable(request)));
   }
 
-  @ParameterizedTest @ValueSource(strings = {"S", "H", "E", "SH", "SE", "HE"})
+  // Both filters' fragments make a request complete, so "SE" is aggregated without the handler's.
+  @ParameterizedTest @ValueSource(strings = {"S", "H", "E", "SH", "HE"})
   void incompleteRequestsStayRawAndDoNotKeepTheSchedulerBusy(String stages) throws Exception {
     for (char c : stages.toCharArray()) logger.handleLog(requestStage(c));
     LogAggregationService agg = service(new AggregationRollupDAO(sessions));
     assertEquals(0, aggregate(agg, true));
     assertNull(agg.earliestUnaggregatedRequestTime());
-    assertEquals(0, agg.pruneRequests(TO, 10));
+    assertEquals(0, prune(agg, true, TO));
     assertEquals(1, scalar("SELECT COUNT(*) FROM log_request"));
     completeRequest();
     assertNotNull(agg.earliestUnaggregatedRequestTime());
@@ -303,15 +304,21 @@ abstract class LogPersistenceCases {
     }
   }
 
-  @Test void legacyIncompleteAggregateIsProtectedFromPruningAndSilentMutation() throws Exception {
+  @Test void legacyIncompleteAggregateIsProtectedFromPruningAndCountsALateFragment() throws Exception {
     logger.handleLog(requestStage('S'));
     try (Connection c = connect(); Statement statement = c.createStatement()) {
       statement.executeUpdate("UPDATE log_request SET aggregatedAt = '2026-01-20 00:00:00'");
     }
     LogAggregationService agg = service(new AggregationRollupDAO(sessions));
-    assertEquals(0, agg.pruneRequests(TO, 10));
-    assertThrows(IllegalStateException.class, () -> logger.handleLog(requestStage('E')));
-    assertEquals(1, scalar("SELECT COUNT(*) FROM log_request WHERE endTime IS NULL"));
+    assertEquals(0, prune(agg, true, TO));
+    long rollups = scalar("SELECT COUNT(*) FROM agg_request_hourly");
+    long late = logger.getLateFragmentCount();
+    assertDoesNotThrow(() -> logger.handleLog(requestStage('E')));
+    assertAll(
+        () -> assertEquals(0, scalar("SELECT COUNT(*) FROM log_request WHERE endTime IS NULL"), "the raw row takes the late END"),
+        () -> assertEquals(1, scalar("SELECT COUNT(*) FROM log_request WHERE aggregatedAt IS NOT NULL"), "and stays aggregated"),
+        () -> assertEquals(1, logger.getLateFragmentCount() - late, "the merge is counted"),
+        () -> assertEquals(rollups, scalar("SELECT COUNT(*) FROM agg_request_hourly"), "the rollups keep the folded request"));
   }
 
   private void completeRequest() { for (char c : "SHE".toCharArray()) logger.handleLog(requestStage(c)); }
@@ -352,8 +359,16 @@ abstract class LogPersistenceCases {
   private long aggregate(LogAggregationService service, boolean request) {
     return request ? service.aggregateLiveRequestBatch(FROM, TO, 10) : service.aggregateLiveCypherBatch(FROM, TO, 10);
   }
-  private int prune(LogAggregationService service, boolean request, Instant cutoff) {
-    return request ? service.pruneRequests(cutoff, 10) : service.pruneCypher(cutoff, 10);
+  private long prune(LogAggregationService service, boolean request, Instant cutoff) {
+    long[] range = request ? service.requestPruneRange(cutoff) : service.cypherPruneRange(cutoff);
+    long deleted = 0;
+    for (long from = range[0]; from >= 0 && from < range[1]; ) {
+      long[] window = request ? service.pruneRequestWindow(from, range[1], cutoff, 10)
+          : service.pruneCypherWindow(from, range[1], cutoff, 10);
+      deleted += window[1];
+      from = window[0];
+    }
+    return deleted;
   }
   private String rawTable(boolean request) { return request ? "log_request" : "log_cypher"; }
   private String rollupTable(boolean request) { return request ? "agg_request_hourly" : "agg_cypher_hourly"; }
