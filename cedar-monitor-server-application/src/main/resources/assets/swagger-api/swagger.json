@@ -3,7 +3,7 @@
   "info" : {
     "description" : "Better Metadata - Better Science\n\nFolders and artifacts use type-qualified selectors: `folders/<uuid>`, `templates/<uuid>`,\n`template-elements/<uuid>`, `template-fields/<uuid>`, or `template-instances/<uuid>`.\nTyped routes include the type once, for example `/templates/<uuid>`. Query parameters and\ncommand-body selectors retain the type, including folder parameters. Percent-encoded full\nIRIs remain accepted for compatibility. Stored document identities and references remain\nfull IRIs; legacy repository hosts must remain absolute until their data is migrated.\n\nThe monitor server reports on the rest of CEDAR: how deep the work queues are, how much each\nstore holds, whether a given server considers itself healthy, and what artifact a given string\nrefers to.\n\nEverything here is read-only and needs the monitor read permission. The counts are meant to be\nread against each other: the workspace graph is authoritative, and the search index disagreeing\nwith it is how a half-finished reindex shows itself.\n",
     "title" : "CEDAR Monitor Server API",
-    "version" : "2.9.26"
+    "version" : "2.9.27"
   },
   "paths" : {
     "/" : {
@@ -1899,7 +1899,7 @@
     },
     "/redis/queue-counts" : {
       "get" : {
-        "description" : "Report how many items are waiting in each of CEDAR's Redis queues: search permissions, NCBI submissions, application logs, value recommender, and instance cloning. A queue that keeps growing is the sign that whatever drains it has stopped.",
+        "description" : "Report how many items are waiting in each of CEDAR's Redis queues: search permissions, application logs and instance cloning. A queue that keeps growing is the sign that whatever drains it has stopped.",
         "operationId" : "queueCounts",
         "responses" : {
           "200" : {
@@ -4597,21 +4597,6 @@
             "format" : "int64",
             "description" : "Claimed by a consumer and not yet acknowledged. A sustained 1 with no progress is a wedged message."
           },
-          "ncbiSubmission" : {
-            "type" : "integer",
-            "format" : "int64",
-            "description" : "Waiting to be claimed."
-          },
-          "ncbiSubmissionDeadLetter" : {
-            "type" : "integer",
-            "format" : "int64",
-            "description" : "Parked after repeated handling failures. Reported, not fatal - the server keeps serving."
-          },
-          "ncbiSubmissionProcessing" : {
-            "type" : "integer",
-            "format" : "int64",
-            "description" : "Claimed by a consumer and not yet acknowledged. A sustained 1 with no progress is a wedged message."
-          },
           "searchPermission" : {
             "type" : "integer",
             "format" : "int64",
@@ -4623,21 +4608,6 @@
             "description" : "Parked after repeated handling failures. Reported, not fatal - the server keeps serving."
           },
           "searchPermissionProcessing" : {
-            "type" : "integer",
-            "format" : "int64",
-            "description" : "Claimed by a consumer and not yet acknowledged. A sustained 1 with no progress is a wedged message."
-          },
-          "valuerecommender" : {
-            "type" : "integer",
-            "format" : "int64",
-            "description" : "Waiting to be claimed."
-          },
-          "valuerecommenderDeadLetter" : {
-            "type" : "integer",
-            "format" : "int64",
-            "description" : "Parked after repeated handling failures. Reported, not fatal - the server keeps serving."
-          },
-          "valuerecommenderProcessing" : {
             "type" : "integer",
             "format" : "int64",
             "description" : "Claimed by a consumer and not yet acknowledged. A sustained 1 with no progress is a wedged message."
@@ -4960,11 +4930,6 @@
               "instance" : {
                 "type" : "integer",
                 "format" : "int64"
-              },
-              "recommenderTotal" : {
-                "type" : "integer",
-                "format" : "int64",
-                "description" : "Every document in the value recommender's own index."
               },
               "template" : {
                 "type" : "integer",

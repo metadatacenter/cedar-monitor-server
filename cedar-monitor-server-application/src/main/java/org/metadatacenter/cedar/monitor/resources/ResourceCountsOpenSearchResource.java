@@ -76,7 +76,6 @@ public class ResourceCountsOpenSearchResource extends AbstractMonitorResource {
     opensearch.put("folder", openSearchCount(() -> nodeSearchingService.getTotalCount(CedarResourceType.FOLDER)));
 
     opensearch.put("artifactTotal", openSearchCount(() -> nodeSearchingService.getTotalArtifactCount()));
-    opensearch.put("recommenderTotal", openSearchCount(() -> nodeSearchingService.getTotalRecommenderCount()));
 
     return Response.ok().entity(r).build();
   }

@@ -211,7 +211,7 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
     Map<String, Object> computed = new HashMap<>();
     r.put("computed", computed);
 
-    FolderServerArtifactReport resourceReport = ArtifactReportUtil.getArtifactReport(c, cedarConfig, artifact,
+    FolderServerArtifactReport resourceReport = ArtifactReportUtil.getArtifactReport(c, artifact,
         folderSession, permissionSession,
         categorySession);
 
