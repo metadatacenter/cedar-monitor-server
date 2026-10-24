@@ -170,8 +170,8 @@ jobs:
           key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
           restore-keys: maven-${{ runner.os }}-
 
-      - name: Run Maven tests
-        run: ./mvnw --batch-mode --no-transfer-progress --update-snapshots test jacoco:report --settings .m2/nexus-settings.xml
+      - name: Run Maven verification
+        run: ./mvnw --batch-mode --no-transfer-progress --update-snapshots verify --settings .m2/nexus-settings.xml
 
       - name: Verify generated OpenAPI is committed
         run: |
