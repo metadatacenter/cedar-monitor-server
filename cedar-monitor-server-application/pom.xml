@@ -21,6 +21,9 @@
     <!-- Line coverage measured on 2026-10-26: 90.8% in CI and 90.7% locally. The floor follows
          the lower figure, and the build fails below it. -->
     <cedar.coverage.line.minimum>0.88</cedar.coverage.line.minimum>
+    <!-- Branch coverage measured on 2026-10-26: 75.1% in CI and 76.4% locally. The floor follows
+         the lower figure, and the build fails below it. -->
+    <cedar.coverage.branch.minimum>0.73</cedar.coverage.branch.minimum>
   </properties>
 
   <dependencies>
