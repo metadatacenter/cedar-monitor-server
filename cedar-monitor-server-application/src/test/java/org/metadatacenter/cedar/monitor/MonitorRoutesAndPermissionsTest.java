@@ -218,6 +218,88 @@ public class MonitorRoutesAndPermissionsTest {
     }
   }
 
+  private static HttpResponse<String> adminGet(String path) throws Exception {
+    return CLIENT.send(HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + path))
+        .header("Authorization", adminUserAuthHeader)
+        .GET().build(), HttpResponse.BodyHandlers.ofString());
+  }
+
+  private static JsonNode lookUp(String input) throws Exception {
+    HttpResponse<String> response = adminGet("/command/resource-id-lookup"
+        + (input == null ? "" : "?input=" + URLEncoder.encode(input, StandardCharsets.UTF_8)));
+    Assertions.assertEquals(200, response.statusCode(), input + ": " + response.body());
+    return JsonMapper.STRICT_MAPPER.readTree(response.body());
+  }
+
+  /** A workbench address names its artifact in its path or in its query, and both are read. */
+  @Test
+  public void resourceLookupFindsTheArtifactInAPastedAddressPathOrQuery() throws Exception {
+    String uuid = "12345678-abcd-1234-abcd-123456789012";
+    CedarConfig config = CedarConfig.getInstance(
+        CedarEnvironmentVariableProvider.getFor(SystemComponent.SERVER_MONITOR));
+    String template = config.getLinkedDataUtil().resolveResourceId("templates/" + uuid);
+
+    JsonNode byPath = lookUp("https://cedar.metadatacenter.org/templates/" + uuid + "?folderId=x");
+    Assertions.assertTrue(byPath.path("success").asBoolean(), byPath.toString());
+    Assertions.assertEquals("path", byPath.path("resourceIdSource").asText(), byPath.toString());
+    Assertions.assertEquals(template, byPath.path("resourceIdString").asText());
+
+    JsonNode byQuery = lookUp("https://cedar.metadatacenter.org/instances/create?folderId&templateId="
+        + URLEncoder.encode(template, StandardCharsets.UTF_8));
+    Assertions.assertTrue(byQuery.path("success").asBoolean(), byQuery.toString());
+    Assertions.assertEquals("queryString", byQuery.path("resourceIdSource").asText(), byQuery.toString());
+    Assertions.assertEquals(template, byQuery.path("resourceIdString").asText());
+  }
+
+  /** Whatever a user pasted, the answer is 200 and says why nothing was found. */
+  @Test
+  public void resourceLookupAnswersEveryInputAndNamesThePhaseThatFoundNothing() throws Exception {
+    for (String input : new String[]{null, "", "  ", "nothing here", "https://example.org/a b",
+        "https://cedar.metadatacenter.org/dashboard?id", "templates/", "/folders/%zz"}) {
+      JsonNode result = lookUp(input);
+      Assertions.assertFalse(result.path("success").asBoolean(), input + ": " + result);
+      Assertions.assertEquals("", result.path("resourceIdString").asText(), input + ": " + result);
+      Assertions.assertFalse(result.path("errorPhase").asText().isEmpty(), input + ": " + result);
+    }
+  }
+
+  /**
+   * Estimates by default and exact counts on request, each per table and totalled per database, for
+   * every schema the log datasource can see.
+   */
+  @Test
+  public void mySqlCountsReportEstimatesOrExactCountsForEveryTable() throws Exception {
+    for (boolean exact : new boolean[]{false, true}) {
+      HttpResponse<String> response = adminGet("/mysql/counts" + (exact ? "?exact=true" : ""));
+      Assertions.assertEquals(200, response.statusCode(), response.body());
+      JsonNode report = JsonMapper.STRICT_MAPPER.readTree(response.body());
+      Assertions.assertEquals(exact, report.path("exactCounts").asBoolean());
+      JsonNode log = null;
+      for (JsonNode source : report.path("sources")) if (source.path("id").asText().equals("log")) log = source;
+      Assertions.assertNotNull(log, response.body());
+      Assertions.assertTrue(log.path("reachable").asBoolean(), response.body());
+      Assertions.assertFalse(log.path("schema").asText().isEmpty(), response.body());
+      Assertions.assertTrue(report.path("databases").size() > 0, response.body());
+      for (JsonNode database : report.path("databases")) {
+        long tableRows = 0;
+        Assertions.assertEquals(database.path("tables").size(), database.path("tableCount").asInt());
+        for (JsonNode table : database.path("tables")) {
+          if (exact) {
+            Assertions.assertTrue(table.path("rowsExact").isIntegralNumber() || table.has("countError"), table.toString());
+            tableRows += table.path("rowsExact").asLong();
+          } else {
+            Assertions.assertTrue(table.path("rowsExact").isNull(), table.toString());
+          }
+          Assertions.assertEquals(table.path("dataBytes").asLong() + table.path("indexBytes").asLong(),
+              table.path("totalBytes").asLong(), table.toString());
+        }
+        if (exact) Assertions.assertEquals(tableRows, database.path("rowsExact").asLong(), database.toString());
+        else Assertions.assertTrue(database.path("rowsExact").isNull(), database.toString());
+      }
+    }
+  }
+
   @Test
   public void authorizedDbShareUsesTheIsolatedDao() throws Exception {
     HttpRequest request = HttpRequest.newBuilder()
