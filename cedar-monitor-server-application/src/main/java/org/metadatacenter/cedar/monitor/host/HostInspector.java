@@ -265,6 +265,16 @@ public final class HostInspector {
    * shape production's nginx access log had while going unrotated for a year.
    */
   public static Map<String, Object> logFiles(String directory) {
+    return logFiles(directory, Files::walk);
+  }
+
+  /** Lists every path under a directory, as {@link Files#walk(Path, java.nio.file.FileVisitOption...)} does. */
+  @FunctionalInterface
+  interface TreeWalk {
+    Stream<Path> walk(Path root) throws IOException;
+  }
+
+  static Map<String, Object> logFiles(String directory, TreeWalk treeWalk) {
     Map<String, Object> report = new LinkedHashMap<>();
     report.put("directory", directory);
 
@@ -280,7 +290,7 @@ public final class HostInspector {
     List<LogFile> files = new ArrayList<>();
     long totalBytes = 0;
     Instant now = Instant.now();
-    try (Stream<Path> walk = Files.walk(root.toPath())) {
+    try (Stream<Path> walk = treeWalk.walk(root.toPath())) {
       List<Path> regular = walk.filter(Files::isRegularFile).toList();
       for (Path path : regular) {
         try {

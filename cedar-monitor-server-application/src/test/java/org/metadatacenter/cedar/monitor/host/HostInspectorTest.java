@@ -1,17 +1,18 @@
 package org.metadatacenter.cedar.monitor.host;
 
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -133,17 +134,19 @@ class HostInspectorTest {
     assertEquals(0, files.get(0).ageDays());
   }
 
-  @Test void aLogTreeThisProcessCannotEnterIsUnreadableWithTheReason(@TempDir Path logs) throws IOException {
-    Path locked = Files.createDirectories(logs.resolve("locked"));
-    Files.writeString(locked.resolve("secret.log"), "x");
-    Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("---------"));
-    try {
-      Assumptions.assumeFalse(locked.toFile().canRead(), "the process can read anything, as root can");
-      Map<String, Object> report = HostInspector.logFiles(logs.toString());
-      assertEquals(false, report.get("readable"));
-      assertNotNull(report.get("error"));
-    } finally {
-      Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("rwx------"));
-    }
+  // A walk that reaches a directory it may not enter throws mid-stream, as Files.walk does. Denying the
+  // permission on disk instead would prove nothing to a process running as root, which reads anything.
+  @Test void aLogTreeThisProcessCannotEnterIsUnreadableWithTheReason(@TempDir Path logs) {
+    Path locked = logs.resolve("locked");
+    Map<String, Object> report = HostInspector.logFiles(logs.toString(), root -> Stream.of(root, locked)
+        .map(path -> {
+          if (path.equals(locked)) {
+            throw new UncheckedIOException(new AccessDeniedException(locked.toString()));
+          }
+          return path;
+        }));
+    assertEquals(false, report.get("readable"));
+    assertEquals(0, report.get("fileCount"));
+    assertTrue(String.valueOf(report.get("error")).contains(locked.toString()), String.valueOf(report.get("error")));
   }
 }
