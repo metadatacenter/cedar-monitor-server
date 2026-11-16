@@ -17,6 +17,7 @@ import org.metadatacenter.server.logging.dao.query.LogQueryDAO;
 import org.metadatacenter.server.logging.query.LogQueryResults.QueryResult;
 import org.metadatacenter.util.json.JsonMapper;
 import org.metadatacenter.cedar.util.dw.CedarMicroserviceIndexResource;
+import org.metadatacenter.cedar.util.dw.CedarServerInsightReportResource;
 import org.metadatacenter.util.test.EmbeddedCedarMySql;
 import org.metadatacenter.util.test.EmbeddedCedarNeo4j;
 import org.metadatacenter.util.test.RouteSurface;
@@ -192,6 +193,27 @@ public class MonitorRoutesAndPermissionsTest {
     }
     Assertions.assertEquals(0, failures.length(),
         "Monitor endpoints did not admit an authorized admin:\n" + failures);
+  }
+
+  /**
+   * The insight reports, which every CEDAR server carries, describe the server's memory, threads and
+   * configuration. A user without MONITOR_READ is refused each one, and the administrator, who holds it,
+   * is served each one.
+   */
+  @Test
+  public void theInsightReportsAreServedOnlyToAHolderOfTheMonitorPermission() {
+    StringBuilder failures = new StringBuilder();
+    List<RouteSurface.Endpoint> endpoints = RouteSurface.endpoints(CedarServerInsightReportResource.class);
+    Assertions.assertEquals(6, endpoints.size(), endpoints.toString());
+    for (RouteSurface.Endpoint endpoint : endpoints) {
+      int refused = statusWithAuth(endpoint, normalUserAuthHeader, failures);
+      int served = statusWithAuth(endpoint, adminUserAuthHeader, failures);
+      if (refused != 403 || served != 200) {
+        failures.append(endpoint.key()).append(": ordinary user ").append(refused).append(", administrator ")
+            .append(served).append('\n');
+      }
+    }
+    Assertions.assertEquals(0, failures.length(), failures.toString());
   }
 
   @Test
