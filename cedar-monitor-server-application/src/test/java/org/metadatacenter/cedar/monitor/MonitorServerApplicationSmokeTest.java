@@ -31,7 +31,6 @@ public class MonitorServerApplicationSmokeTest {
     Map<String, String> environment = new HashMap<>(CedarEnvironmentSource.getAll());
     environment.put("CEDAR_MONITOR_HTTP_PORT", "0");
     environment.put("CEDAR_MONITOR_ADMIN_PORT", "0");
-    environment.put("CEDAR_MONITOR_STOP_PORT", "0");
     // Startup opens the log database, so that is embedded. The graph and OpenSearch are dead ports:
     // nothing here should reach them, and if something starts to, it fails here rather than reading
     // whatever the developer has running.

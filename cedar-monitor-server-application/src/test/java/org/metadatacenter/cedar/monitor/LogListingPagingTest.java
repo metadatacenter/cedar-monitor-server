@@ -65,7 +65,6 @@ public class LogListingPagingTest {
     Map<String, String> ports = new HashMap<>();
     ports.put("CEDAR_MONITOR_HTTP_PORT", "0");
     ports.put("CEDAR_MONITOR_ADMIN_PORT", "0");
-    ports.put("CEDAR_MONITOR_STOP_PORT", "0");
     ports.put("CEDAR_REDIS_PERSISTENT_PORT", "1");
     ports.put("CEDAR_RESOURCE_SERVER_HOST", "127.0.0.1");
     ports.put("CEDAR_RESOURCE_HTTP_PORT", "1");

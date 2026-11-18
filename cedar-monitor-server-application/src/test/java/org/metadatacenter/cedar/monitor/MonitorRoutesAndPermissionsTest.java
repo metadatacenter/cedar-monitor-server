@@ -78,7 +78,6 @@ public class MonitorRoutesAndPermissionsTest {
     Map<String, String> environment = new HashMap<>(CedarEnvironmentSource.getAll());
     environment.put("CEDAR_MONITOR_HTTP_PORT", "0");
     environment.put("CEDAR_MONITOR_ADMIN_PORT", "0");
-    environment.put("CEDAR_MONITOR_STOP_PORT", "0");
     environment.put("CEDAR_REDIS_PERSISTENT_PORT", "1");
     environment.put("CEDAR_RESOURCE_SERVER_HOST", "127.0.0.1");
     environment.put("CEDAR_RESOURCE_HTTP_PORT", "1");
