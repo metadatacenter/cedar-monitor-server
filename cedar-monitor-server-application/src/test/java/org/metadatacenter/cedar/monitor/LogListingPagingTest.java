@@ -65,7 +65,6 @@ public class LogListingPagingTest {
     Map<String, String> ports = new HashMap<>();
     ports.put("CEDAR_MONITOR_HTTP_PORT", "0");
     ports.put("CEDAR_MONITOR_ADMIN_PORT", "0");
-    ports.put("CEDAR_MONITOR_STOP_PORT", "0");
     ports.put("CEDAR_REDIS_PERSISTENT_PORT", "1");
     ports.put("CEDAR_RESOURCE_SERVER_HOST", "127.0.0.1");
     ports.put("CEDAR_RESOURCE_HTTP_PORT", "1");
@@ -125,11 +124,17 @@ public class LogListingPagingTest {
     SERVER.after();
   }
 
+  /**
+   * Truncates rather than deletes. A DELETE only marks rows, and InnoDB purges them in the background
+   * while the next case runs; the embedded MariaDB can then answer a backward primary-key scan, such as
+   * MAX(id) or ORDER BY id DESC, as if the table were empty. The explorer's listings and the prune walk
+   * both read that way.
+   */
   @BeforeEach
   public void emptyTheLogTables() throws Exception {
     try (Connection c = connect(); Statement s = c.createStatement()) {
       for (String table : TABLES) {
-        s.execute("DELETE FROM " + table);
+        s.execute("TRUNCATE TABLE " + table);
       }
     }
   }
