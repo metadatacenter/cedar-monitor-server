@@ -21,6 +21,18 @@ info:
     Everything here is read-only and needs the monitor read permission. The counts are meant to be
     read against each other: the workspace graph is authoritative, and the search index disagreeing
     with it is how a half-finished reindex shows itself.
+
+    The log listings under `/logs/explorer` and `/logs/usage` page by `limit` and `offset`. The
+    limit defaults to 100 and may be at most 500; a larger one is refused with 400. Each page
+    carries CEDAR's paging envelope: `request`, `totalCount`, `currentOffset` and `paging`, the
+    links to the first, previous, next and last pages. The raw request and Cypher logs stop
+    counting at a ceiling. Their pages then carry `countCapped` as true, `totalCount` is a lower
+    bound, and there is no `last` link.
+
+    The raw rows of `POST /logs/query` are the exception. They are a keyset walk rather than an
+    offset-paged listing and do not use the envelope. A page's `nextCursor`, of the form
+    `"<iso-8601 instant>,<row id>"`, is sent back as `cursor` to read the next page, and its limit
+    may be up to 2000.
   version: ${project.version}
 components:
   schemas:

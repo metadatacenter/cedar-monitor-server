@@ -51,7 +51,7 @@ import java.util.Optional;
 @SecurityRequirement(name = "api_key")
 public class LogUsageResource extends AbstractMonitorResource {
 
-  private static final int DEFAULT_LIMIT = 50;
+  private static final int DEFAULT_LIMIT = 100;
   private static final int MAX_LIMIT = 500;
   private final AggregationQueryDAO dao;
 
@@ -114,7 +114,7 @@ public class LogUsageResource extends AbstractMonitorResource {
       @QueryParam("from") String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
       @QueryParam("to") String to,
-      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 50.")
+      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
       @QueryParam("limit") Optional<Integer> limit,
       @Parameter(description = "How many rows to skip. Defaults to 0.")
       @QueryParam("offset") Optional<Integer> offset) throws CedarException {
@@ -150,7 +150,7 @@ public class LogUsageResource extends AbstractMonitorResource {
       @QueryParam("from") String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
       @QueryParam("to") String to,
-      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 50.")
+      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
       @QueryParam("limit") Optional<Integer> limit,
       @Parameter(description = "How many rows to skip. Defaults to 0.")
       @QueryParam("offset") Optional<Integer> offset) throws CedarException {
@@ -184,7 +184,7 @@ public class LogUsageResource extends AbstractMonitorResource {
       @QueryParam("from") String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
       @QueryParam("to") String to,
-      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 50.")
+      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
       @QueryParam("limit") Optional<Integer> limit,
       @Parameter(description = "How many rows to skip. Defaults to 0.")
       @QueryParam("offset") Optional<Integer> offset) throws CedarException {

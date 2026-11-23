@@ -17,6 +17,18 @@ info:
     Everything here is read-only and needs the monitor read permission. The counts are meant to be
     read against each other: the workspace graph is authoritative, and the search index disagreeing
     with it is how a half-finished reindex shows itself.
+
+    The log listings under `/logs/explorer` and `/logs/usage` page by `limit` and `offset`. The
+    limit defaults to 100 and may be at most 500; a larger one is refused with 400. Each page
+    carries CEDAR's paging envelope: `request`, `totalCount`, `currentOffset` and `paging`, the
+    links to the first, previous, next and last pages. The raw request and Cypher logs stop
+    counting at a ceiling. Their pages then carry `countCapped` as true, `totalCount` is a lower
+    bound, and there is no `last` link.
+
+    The raw rows of `POST /logs/query` are the exception. They are a keyset walk rather than an
+    offset-paged listing and do not use the envelope. A page's `nextCursor`, of the form
+    `"<iso-8601 instant>,<row id>"`, is sent back as `cursor` to read the next page, and its limit
+    may be up to 2000.
   title: CEDAR Monitor Server API
   version: 2.9.38-SNAPSHOT
 paths:
@@ -931,10 +943,16 @@ paths:
         \ a spec naming a column the engine does not know is rejected rather than\
         \ run. An empty `groupBy` returns raw rows newest first, paged by the cursor\
         \ the previous result handed back; a non-empty one returns an aggregate. The\
-        \ result carries its own provenance, so a caller can tell an exact answer\
-        \ from a histogram-approximate one and a complete result from a capped one.\
-        \ It is POST rather than GET because a spec with several filters and a metric\
-        \ list outgrows a URL. Requires the monitor read permission."
+        \ raw rows are a keyset walk rather than an offset-paged listing, so they\
+        \ do not use CEDAR's paging envelope. Their `cursor` is the `\"<iso-8601 instant>,<row\
+        \ id>\"` of the last row already read. Their `limit` defaults to 100, and\
+        \ a limit above 2000 is lowered to 2000. A grouped query returns one page\
+        \ of at most 500 groups, with `limit` defaulting to 100, and a limit above\
+        \ 500 is refused with 400. The result carries its own provenance, so a caller\
+        \ can tell an exact answer from a histogram-approximate one and a complete\
+        \ result from a capped one. It is POST rather than GET because a spec with\
+        \ several filters and a metric list outgrows a URL. Requires the monitor read\
+        \ permission."
       operationId: query
       requestBody:
         content:
@@ -943,7 +961,9 @@ paths:
               $ref: "#/components/schemas/LogQuerySpec"
         description: "The query to run. Every field is optional and is normalized\
           \ before use: `table` defaults to the request log, `source` selects the\
-          \ raw log tables or the hourly rollups, and `limit` is capped by the engine."
+          \ raw log tables or the hourly rollups, and `limit` defaults to 100. A raw\
+          \ query's limit above 2000 is lowered to 2000; a grouped query's limit above\
+          \ 500 is refused."
         required: true
       responses:
         "200":
@@ -958,7 +978,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/CedarError"
           description: "The spec named an unknown table, column, metric or operator,\
-            \ or its cursor could not be read"
+            \ its cursor could not be read, or a grouped query asked for more than\
+            \ 500 rows"
         "401":
           content:
             application/json:
@@ -1067,7 +1088,7 @@ paths:
         name: to
         schema:
           type: string
-      - description: "How many rows to return, from 1 to 500. Defaults to 50."
+      - description: "How many rows to return, from 1 to 500. Defaults to 100."
         in: query
         name: limit
         schema:
@@ -1136,7 +1157,7 @@ paths:
         name: to
         schema:
           type: string
-      - description: "How many rows to return, from 1 to 500. Defaults to 50."
+      - description: "How many rows to return, from 1 to 500. Defaults to 100."
         in: query
         name: limit
         schema:
@@ -1308,7 +1329,7 @@ paths:
         name: to
         schema:
           type: string
-      - description: "How many rows to return, from 1 to 500. Defaults to 50."
+      - description: "How many rows to return, from 1 to 500. Defaults to 100."
         in: query
         name: limit
         schema:

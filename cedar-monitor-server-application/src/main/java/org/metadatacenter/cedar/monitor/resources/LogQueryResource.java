@@ -83,7 +83,11 @@ public class LogQueryResource extends AbstractMonitorResource {
           + "on. The body is a structured spec rather than SQL text: column names are resolved against an "
           + "allowlist and values are bound, so a spec naming a column the engine does not know is rejected "
           + "rather than run. An empty `groupBy` returns raw rows newest first, paged by the cursor the "
-          + "previous result handed back; a non-empty one returns an aggregate. The result carries its own "
+          + "previous result handed back; a non-empty one returns an aggregate. The raw rows are a keyset walk "
+          + "rather than an offset-paged listing, so they do not use CEDAR's paging envelope. Their `cursor` is the "
+          + "`\"<iso-8601 instant>,<row id>\"` of the last row already read. Their `limit` defaults to 100, and a "
+          + "limit above 2000 is lowered to 2000. A grouped query returns one page of at most 500 groups, with "
+          + "`limit` defaulting to 100, and a limit above 500 is refused with 400. The result carries its own "
           + "provenance, so a caller can tell an exact answer from a histogram-approximate one and a "
           + "complete result from a capped one. It is POST rather than GET because a spec with several "
           + "filters and a metric list outgrows a URL. Requires the monitor read permission.")
@@ -91,7 +95,8 @@ public class LogQueryResource extends AbstractMonitorResource {
       @ApiResponse(responseCode = "200", description = "The columns, the rows and the result's provenance",
           content = @Content(schema = @Schema(implementation = QueryResult.class))),
       @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)),
-          description = "The spec named an unknown table, column, metric or operator, or its cursor could not be read"),
+          description = "The spec named an unknown table, column, metric or operator, its cursor could not be "
+              + "read, or a grouped query asked for more than 500 rows"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
@@ -100,7 +105,8 @@ public class LogQueryResource extends AbstractMonitorResource {
       @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
           description = "The query to run. Every field is optional and is normalized before use: `table` "
               + "defaults to the request log, `source` selects the raw log tables or the hourly rollups, and "
-              + "`limit` is capped by the engine.",
+              + "`limit` defaults to 100. A raw query's limit above 2000 is lowered to 2000; a grouped query's "
+              + "limit above 500 is refused.",
           content = @Content(schema = @Schema(implementation = LogQuerySpec.class)))
       LogQuerySpec spec) throws CedarException {
     authorize(buildRequestContext());

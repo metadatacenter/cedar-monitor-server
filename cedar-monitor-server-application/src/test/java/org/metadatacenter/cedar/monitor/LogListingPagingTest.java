@@ -368,16 +368,17 @@ public class LogListingPagingTest {
   }
 
   @Test
-  public void usageDefaultsToFiftyRows() throws Exception {
-    for (int e = 0; e < 55; e++) {
+  public void usageDefaultsToOneHundredRows() throws Exception {
+    for (int e = 0; e < 105; e++) {
       seedRequestHourly(SEED_HOUR, "Resource" + e, 1);
     }
     String range = RANGE;
 
     JsonNode page = get("/logs/usage/endpoints?" + range);
 
-    assertEquals(50, page.get("endpoints").size());
-    assertEquals(55, page.get("totalCount").asLong());
+    assertEquals(100, page.get("endpoints").size());
+    assertEquals(100, page.get("request").get("limit").asInt());
+    assertEquals(105, page.get("totalCount").asLong());
   }
 
   @Test
@@ -412,8 +413,34 @@ public class LogListingPagingTest {
   @Test
   public void usageRefusesOutOfRangePaging() throws Exception {
     assertEquals(400, status("/logs/usage/endpoints?limit=501"));
+    assertEquals(400, status("/logs/usage/cypher?limit=501"));
+    assertEquals(400, status("/logs/usage/users?limit=501"));
     assertEquals(400, status("/logs/usage/cypher?limit=0"));
     assertEquals(400, status("/logs/usage/users?offset=-5"));
+  }
+
+  @Test
+  public void usageAcceptsALimitOf500() throws Exception {
+    String range = RANGE;
+    assertEquals(200, status("/logs/usage/endpoints?limit=500&" + range));
+    assertEquals(200, status("/logs/usage/cypher?limit=500&" + range));
+    assertEquals(200, status("/logs/usage/users?limit=500&" + range));
+  }
+
+  // ---- structured query ------------------------------------------------------------------------
+
+  @Test
+  public void aGroupedQueryAcceptsALimitOf500AndRefuses501() throws Exception {
+    assertEquals(200, postQuery(querySpec("[\"component\"]", 500)).statusCode());
+    HttpResponse<String> over = postQuery(querySpec("[\"component\"]", 501));
+    assertEquals(400, over.statusCode(), over.body());
+    assertTrue(over.body().contains("at most 500"), over.body());
+  }
+
+  @Test
+  public void aRawQueryOver500IsNotRefusedBecauseItIsACursorWalk() throws Exception {
+    HttpResponse<String> response = postQuery(querySpec("[]", 2001));
+    assertEquals(200, response.statusCode(), response.body());
   }
 
   @Test
@@ -445,6 +472,22 @@ public class LogListingPagingTest {
         .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + pathAndQuery))
         .header("Authorization", adminAuthHeader)
         .GET().build();
+    return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  private static String querySpec(String groupBy, Integer limit) {
+    String metrics = "[]".equals(groupBy) ? "[]" : "[\"count\"]";
+    return "{\"table\":\"request\",\"from\":\"" + NOW.minus(1, ChronoUnit.DAYS) + "\",\"to\":\"" + NOW
+        + "\",\"groupBy\":" + groupBy + ",\"metrics\":" + metrics
+        + (limit == null ? "" : ",\"limit\":" + limit) + "}";
+  }
+
+  private static HttpResponse<String> postQuery(String spec) throws Exception {
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/logs/query"))
+        .header("Authorization", adminAuthHeader)
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(spec)).build();
     return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
   }
 

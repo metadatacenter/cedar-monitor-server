@@ -1,7 +1,7 @@
 {
   "openapi" : "3.0.1",
   "info" : {
-    "description" : "Better Metadata - Better Science\n\nFolders and artifacts use type-qualified selectors: `folders/<uuid>`, `templates/<uuid>`,\n`template-elements/<uuid>`, `template-fields/<uuid>`, or `template-instances/<uuid>`.\nTyped routes include the type once, for example `/templates/<uuid>`. Query parameters and\ncommand-body selectors retain the type, including folder parameters. Percent-encoded full\nIRIs remain accepted for compatibility. Stored document identities and references remain\nfull IRIs; legacy repository hosts must remain absolute until their data is migrated.\n\nThe monitor server reports on the rest of CEDAR: how deep the work queues are, how much each\nstore holds, whether a given server considers itself healthy, and what artifact a given string\nrefers to.\n\nEverything here is read-only and needs the monitor read permission. The counts are meant to be\nread against each other: the workspace graph is authoritative, and the search index disagreeing\nwith it is how a half-finished reindex shows itself.\n",
+    "description" : "Better Metadata - Better Science\n\nFolders and artifacts use type-qualified selectors: `folders/<uuid>`, `templates/<uuid>`,\n`template-elements/<uuid>`, `template-fields/<uuid>`, or `template-instances/<uuid>`.\nTyped routes include the type once, for example `/templates/<uuid>`. Query parameters and\ncommand-body selectors retain the type, including folder parameters. Percent-encoded full\nIRIs remain accepted for compatibility. Stored document identities and references remain\nfull IRIs; legacy repository hosts must remain absolute until their data is migrated.\n\nThe monitor server reports on the rest of CEDAR: how deep the work queues are, how much each\nstore holds, whether a given server considers itself healthy, and what artifact a given string\nrefers to.\n\nEverything here is read-only and needs the monitor read permission. The counts are meant to be\nread against each other: the workspace graph is authoritative, and the search index disagreeing\nwith it is how a half-finished reindex shows itself.\n\nThe log listings under `/logs/explorer` and `/logs/usage` page by `limit` and `offset`. The\nlimit defaults to 100 and may be at most 500; a larger one is refused with 400. Each page\ncarries CEDAR's paging envelope: `request`, `totalCount`, `currentOffset` and `paging`, the\nlinks to the first, previous, next and last pages. The raw request and Cypher logs stop\ncounting at a ceiling. Their pages then carry `countCapped` as true, `totalCount` is a lower\nbound, and there is no `last` link.\n\nThe raw rows of `POST /logs/query` are the exception. They are a keyset walk rather than an\noffset-paged listing and do not use the envelope. A page's `nextCursor`, of the form\n`\"<iso-8601 instant>,<row id>\"`, is sent back as `cursor` to read the next page, and its limit\nmay be up to 2000.\n",
     "title" : "CEDAR Monitor Server API",
     "version" : "2.9.38-SNAPSHOT"
   },
@@ -1265,7 +1265,7 @@
     },
     "/logs/query" : {
       "post" : {
-        "description" : "The one query surface the Explorer, the pivot view and every Insight board are built on. The body is a structured spec rather than SQL text: column names are resolved against an allowlist and values are bound, so a spec naming a column the engine does not know is rejected rather than run. An empty `groupBy` returns raw rows newest first, paged by the cursor the previous result handed back; a non-empty one returns an aggregate. The result carries its own provenance, so a caller can tell an exact answer from a histogram-approximate one and a complete result from a capped one. It is POST rather than GET because a spec with several filters and a metric list outgrows a URL. Requires the monitor read permission.",
+        "description" : "The one query surface the Explorer, the pivot view and every Insight board are built on. The body is a structured spec rather than SQL text: column names are resolved against an allowlist and values are bound, so a spec naming a column the engine does not know is rejected rather than run. An empty `groupBy` returns raw rows newest first, paged by the cursor the previous result handed back; a non-empty one returns an aggregate. The raw rows are a keyset walk rather than an offset-paged listing, so they do not use CEDAR's paging envelope. Their `cursor` is the `\"<iso-8601 instant>,<row id>\"` of the last row already read. Their `limit` defaults to 100, and a limit above 2000 is lowered to 2000. A grouped query returns one page of at most 500 groups, with `limit` defaulting to 100, and a limit above 500 is refused with 400. The result carries its own provenance, so a caller can tell an exact answer from a histogram-approximate one and a complete result from a capped one. It is POST rather than GET because a spec with several filters and a metric list outgrows a URL. Requires the monitor read permission.",
         "operationId" : "query",
         "requestBody" : {
           "content" : {
@@ -1275,7 +1275,7 @@
               }
             }
           },
-          "description" : "The query to run. Every field is optional and is normalized before use: `table` defaults to the request log, `source` selects the raw log tables or the hourly rollups, and `limit` is capped by the engine.",
+          "description" : "The query to run. Every field is optional and is normalized before use: `table` defaults to the request log, `source` selects the raw log tables or the hourly rollups, and `limit` defaults to 100. A raw query's limit above 2000 is lowered to 2000; a grouped query's limit above 500 is refused.",
           "required" : true
         },
         "responses" : {
@@ -1297,7 +1297,7 @@
                 }
               }
             },
-            "description" : "The spec named an unknown table, column, metric or operator, or its cursor could not be read"
+            "description" : "The spec named an unknown table, column, metric or operator, its cursor could not be read, or a grouped query asked for more than 500 rows"
           },
           "401" : {
             "content" : {
@@ -1436,7 +1436,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "How many rows to return, from 1 to 500. Defaults to 50.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 100.",
           "in" : "query",
           "name" : "limit",
           "schema" : {
@@ -1530,7 +1530,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "How many rows to return, from 1 to 500. Defaults to 50.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 100.",
           "in" : "query",
           "name" : "limit",
           "schema" : {
@@ -1760,7 +1760,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "How many rows to return, from 1 to 500. Defaults to 50.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 100.",
           "in" : "query",
           "name" : "limit",
           "schema" : {
