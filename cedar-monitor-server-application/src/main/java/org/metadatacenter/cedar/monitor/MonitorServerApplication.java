@@ -117,6 +117,7 @@ public class MonitorServerApplication extends CedarMicroserviceApplication<Monit
 
     final SearchIndexResource searchIndexResource = new SearchIndexResource(cedarConfig);
     environment.jersey().register(searchIndexResource);
+    environment.jersey().register(new JobsResource(cedarConfig));
 
     final ResourceCountsResource resourceCounts = new ResourceCountsResource(cedarConfig);
     environment.jersey().register(resourceCounts);

@@ -411,6 +411,120 @@ paths:
       summary: Report JVM thread counts
       tags:
       - Service diagnostics
+  /jobs:
+    get:
+      description: "Relay the resource server's job listing: its search index rebuilds\
+        \ and value sets ontology imports, newest first, so the first job of a kind\
+        \ is the one running now or the one that ran last. For a rebuild, each job\
+        \ says how far it got: the phase, the count against its total, the breakdown\
+        \ by resource type, the rate it is achieving and an estimate of when it will\
+        \ finish."
+      operationId: listJobs
+      parameters:
+      - description: "Return only jobs of this kind: search-index or value-sets-import.\
+          \ Omit it for both."
+        in: query
+        name: kind
+        schema:
+          type: string
+      - description: "How many jobs to return, from 1 to 500. Defaults to 100."
+        in: query
+        name: limit
+        schema:
+          type: integer
+          format: int32
+      - description: How many jobs to skip. Defaults to 0.
+        in: query
+        name: offset
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobPage"
+          description: One page of jobs
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: "The kind is not one the resource server runs, or the limit\
+            \ or offset is out of range"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Internal server error
+      security:
+      - api_key: []
+      summary: List the resource server's jobs
+      tags:
+      - Jobs
+  /jobs/{id}:
+    get:
+      description: "Relay the resource server's status of one job, named by the identifier\
+        \ its command returned. A rebuild the server did not survive is reported as\
+        \ INTERRUPTED with the progress of its last heartbeat."
+      operationId: getJob
+      parameters:
+      - description: "Job identifier, as returned when the job was queued."
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatus"
+          description: The job and its current state
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Unauthorized
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: The caller lacks the monitor read permission
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: No job answers to this identifier
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CedarError"
+          description: Internal server error
+      security:
+      - api_key: []
+      summary: Get the status of one of the resource server's jobs
+      tags:
+      - Jobs
   /logs/boards:
     get:
       description: "The catalogue of predefined questions, each one a saved query\
@@ -1940,60 +2054,28 @@ paths:
       summary: Get everything CEDAR knows about a user
       tags:
       - Diagnostics
-  /search-index/job-status:
-    get:
-      description: "Report the state of each index rebuild, and for one that is running\
-        \ or was running, how far it got: the phase, the count against its total,\
-        \ the breakdown by resource type, the rate it is achieving and an estimate\
-        \ of when it will finish. A rebuild the server did not survive is reported\
-        \ as INTERRUPTED with the progress of its last heartbeat, rather than as though\
-        \ nothing had ever run."
-      operationId: jobStatus
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/IndexJobStatusByIndex"
-          description: The state of each index
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CedarError"
-          description: Unauthorized
-        "403":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CedarError"
-          description: The caller lacks the monitor read permission
-        "500":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CedarError"
-          description: Internal server error
-      security:
-      - api_key: []
-      summary: How far the search index rebuild has got
-      tags:
-      - Search index
   /search-index/regenerate:
     post:
-      description: "Queue a rebuild of the search index and answer with the job to\
-        \ poll. The rebuild runs for as long as the repository requires — hours, on\
-        \ a large one — while search continues against the existing index. Requires\
-        \ the search reindex permission, which the resource server checks against\
-        \ the caller's own credential; the Monitor adds no authority of its own."
+      description: "Queue a rebuild of the search index and answer with the job, and\
+        \ a Location naming it under /jobs, which this server relays. The rebuild\
+        \ runs for as long as the repository requires — hours, on a large one — while\
+        \ search continues against the existing index. Requires the search reindex\
+        \ permission, which the resource server checks against the caller's own credential;\
+        \ the Monitor adds no authority of its own."
       operationId: regenerate
       responses:
         "202":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/IndexJobStatus"
+                $ref: "#/components/schemas/JobStatus"
           description: The rebuild was queued
+          headers:
+            Location:
+              description: Where to poll this job's status.
+              schema:
+                type: string
+              style: simple
         "401":
           content:
             application/json:
@@ -3153,63 +3235,6 @@ components:
         scope:
           type: string
           description: Which host the report covers.
-    IndexJobStatus:
-      type: object
-      additionalProperties: false
-      description: |
-        What became of the most recent rebuild of one index, or that none has run since this server
-        started. `deadlineAt` and `overdue` describe a running job and are empty otherwise.
-      properties:
-        command:
-          type: string
-          description: The command that started the job.
-          nullable: true
-        deadlineAt:
-          type: string
-          format: date-time
-          nullable: true
-        failure:
-          type: string
-          description: "What went wrong, when the state is FAILED or INTERRUPTED."
-          nullable: true
-        finishedAt:
-          type: string
-          format: date-time
-          nullable: true
-        jobId:
-          type: string
-          nullable: true
-        overdue:
-          type: boolean
-        progress:
-          allOf:
-          - $ref: "#/components/schemas/IndexingProgress"
-          description: |
-            How far this job got. Present for a job that is running and for one that has finished,
-            failed or was interrupted; absent for an index no job has run over.
-          nullable: true
-        startedAt:
-          type: string
-          format: date-time
-          nullable: true
-        state:
-          type: string
-          enum:
-          - IDLE
-          - RUNNING
-          - COMPLETE
-          - FAILED
-          - ABANDONED
-          - INTERRUPTED
-      required:
-      - overdue
-      - state
-    IndexJobStatusByIndex:
-      type: object
-      additionalProperties:
-        $ref: "#/components/schemas/IndexJobStatus"
-      description: "The state of each index a rebuild can contend over, keyed by the\
-        \ index name."
     IndexingProgress:
       type: object
       additionalProperties: false
@@ -3305,6 +3330,135 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EndpointStat"
+    JobPage:
+      type: object
+      additionalProperties: false
+      description: "One page of the jobs a server knows, newest first."
+      properties:
+        currentOffset:
+          type: integer
+          format: int64
+          description: The offset of the first job on this page
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobStatus"
+        paging:
+          type: object
+          additionalProperties:
+            type: string
+          description: "Links to the first, previous, next and last pages, keyed by\
+            \ relation. A relation with no page is absent."
+        request:
+          $ref: "#/components/schemas/JobPageRequest"
+        totalCount:
+          type: integer
+          format: int64
+          description: How many jobs the filter admits
+      required:
+      - currentOffset
+      - jobs
+      - paging
+      - request
+      - totalCount
+    JobPageRequest:
+      type: object
+      additionalProperties: false
+      description: "The page that was asked for, after defaults were applied"
+      properties:
+        limit:
+          type: integer
+          format: int32
+        offset:
+          type: integer
+          format: int32
+      required:
+      - limit
+      - offset
+    JobStatus:
+      type: object
+      additionalProperties: false
+      description: |
+        One job, in the shape every CEDAR server that runs jobs reports it in. `deadlineAt` and
+        `overdue` describe a running job and are empty otherwise. The properties after `failure`
+        belong to one kind of job each and are absent for the others.
+      properties:
+        command:
+          type: string
+          description: The command that started the job.
+          nullable: true
+        deadlineAt:
+          type: string
+          format: date-time
+          description: When a running job that reports nothing more will be believed
+            to have stopped.
+          nullable: true
+        failure:
+          type: string
+          description: "What went wrong, when the state is FAILED, ABANDONED or INTERRUPTED."
+          nullable: true
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        importStatus:
+          type: string
+          description: A value sets import's state under the name the caDSR ingestor
+            reads.
+          enum:
+          - NOT_YET_INITIATED
+          - IN_PROGRESS
+          - COMPLETE
+          - ERROR
+        jobId:
+          type: string
+        kind:
+          type: string
+          enum:
+          - search-index
+          - value-sets-import
+          - inclusion-subgraph
+        overdue:
+          type: boolean
+        progress:
+          allOf:
+          - $ref: "#/components/schemas/IndexingProgress"
+          description: How far a search index rebuild got.
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        state:
+          type: string
+          description: |
+            ABANDONED is a job whose claim was reset with `POST /jobs/{id}/reset`, which may still be
+            running. INTERRUPTED is a job the server did not survive.
+          enum:
+          - QUEUED
+          - RUNNING
+          - COMPLETE
+          - FAILED
+          - ABANDONED
+          - INTERRUPTED
+        submittedAt:
+          type: string
+          format: date-time
+          description: When an inclusion-subgraph regeneration was asked for.
+        unreadableArtifacts:
+          type: array
+          description: |
+            The artifacts a completed inclusion-subgraph regeneration left as they were because the
+            artifact server answered something other than 200 for them. Their inclusion arcs were
+            neither refreshed nor removed. Empty when every artifact was read; null until the job
+            completes.
+          items:
+            type: string
+          nullable: true
+      required:
+      - jobId
+      - kind
+      - overdue
+      - state
     LogDirectoryReport:
       type: object
       additionalProperties: false

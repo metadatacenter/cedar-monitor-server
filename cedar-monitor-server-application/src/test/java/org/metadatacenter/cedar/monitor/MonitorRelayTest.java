@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The Monitor's relay of another server's answer, against a resource server that answers.
@@ -47,7 +48,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class MonitorRelayTest {
 
   private static final String REGENERATE = "/command/regenerate-search-index";
-  private static final String JOB_STATUS = "/command/index-job-status";
+  private static final String JOBS = "/jobs";
+  private static final String LOCATION = "/jobs/rebuild-1";
 
   /** One request the resource server received. */
   private record Received(String method, String path, String authorization, String body) {}
@@ -121,20 +123,48 @@ public class MonitorRelayTest {
 
     assertEquals(status, response.statusCode(), response.body());
     assertEquals(body, response.body());
+    String location = response.headers().firstValue("Location").orElse("");
+    assertTrue(location.endsWith(LOCATION), "the relay passes the Location through: " + location);
     assertEquals(List.of(new Received("POST", REGENERATE, adminAuthHeader, "{\"force\":true}")), RECEIVED);
   }
 
   /** The progress of a rebuild is the resource server's answer, read with the caller's credential. */
   @Test
   void aRebuildsProgressIsTheResourceServersAnswer() throws Exception {
-    String progress = "{\"state\":\"RUNNING\",\"indexed\":120,\"total\":400}";
+    String progress = "{\"jobId\":\"rebuild-1\",\"state\":\"RUNNING\"}";
     answer(200, progress);
 
-    HttpResponse<String> response = send(HttpRequest.newBuilder(monitor("/search-index/job-status")).GET());
+    HttpResponse<String> response = send(HttpRequest.newBuilder(monitor(LOCATION)).GET());
 
     assertEquals(200, response.statusCode(), response.body());
     assertEquals(progress, response.body());
-    assertEquals(List.of(new Received("GET", JOB_STATUS, adminAuthHeader, "")), RECEIVED);
+    assertEquals(List.of(new Received("GET", LOCATION, adminAuthHeader, "")), RECEIVED);
+  }
+
+  /** The listing is relayed with the query it was sent, so the resource server applies its own rules. */
+  @ParameterizedTest(name = "{0}")
+  @CsvSource(delimiter = '|', value = {
+      "200 | {\"jobs\":[]}",
+      "400 | {\"errorKey\":\"badKind\",\"message\":\"This server runs no job of kind rules\"}"})
+  void theJobListingIsTheResourceServersAnswer(int status, String body) throws Exception {
+    answer(status, body);
+
+    HttpResponse<String> response = send(HttpRequest.newBuilder(monitor(JOBS + "?kind=search-index&limit=1")).GET());
+
+    assertEquals(status, response.statusCode(), response.body());
+    assertEquals(body, response.body());
+    assertEquals(List.of(new Received("GET", JOBS + "?kind=search-index&limit=1", adminAuthHeader, "")), RECEIVED);
+  }
+
+  /** The status route the job listing replaced is gone rather than kept as an alias. */
+  @Test
+  void theFormerJobStatusRouteIsGone() throws Exception {
+    answer(200, "{}");
+
+    HttpResponse<String> response = send(HttpRequest.newBuilder(monitor("/search-index/job-status")).GET());
+
+    assertEquals(404, response.statusCode(), response.body());
+    assertEquals(List.of(), RECEIVED, "nothing reached the resource server");
   }
 
   private static void answer(int status, String body) {
@@ -166,10 +196,13 @@ public class MonitorRelayTest {
 
   private static void answer(HttpExchange exchange) throws IOException {
     String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-    RECEIVED.add(new Received(exchange.getRequestMethod(), exchange.getRequestURI().getPath(),
+    String query = exchange.getRequestURI().getRawQuery();
+    String path = exchange.getRequestURI().getRawPath() + (query == null ? "" : "?" + query);
+    RECEIVED.add(new Received(exchange.getRequestMethod(), path,
         exchange.getRequestHeaders().getFirst("Authorization"), body));
     byte[] payload = answerBody.getBytes(StandardCharsets.UTF_8);
     exchange.getResponseHeaders().set("Content-Type", "application/json");
+    exchange.getResponseHeaders().set("Location", LOCATION);
     exchange.sendResponseHeaders(answerStatus, payload.length);
     try (OutputStream out = exchange.getResponseBody()) {
       out.write(payload);
