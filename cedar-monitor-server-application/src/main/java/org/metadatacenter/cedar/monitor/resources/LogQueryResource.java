@@ -94,9 +94,10 @@ public class LogQueryResource extends AbstractMonitorResource {
           + "rather than run. An empty `groupBy` returns raw rows newest first, paged by the cursor the "
           + "previous result handed back; a non-empty one returns an aggregate. The raw rows are a keyset walk "
           + "rather than an offset-paged listing, so they do not use CEDAR's paging envelope. Their `cursor` is the "
-          + "`\"<iso-8601 instant>,<row id>\"` of the last row already read. Their `limit` defaults to 100, and a "
-          + "limit above 2000 is lowered to 2000. A grouped query returns one page of at most 500 groups, with "
-          + "`limit` defaulting to 100, and a limit above 500 is refused with 400. The result carries its own "
+          + "`\"<iso-8601 instant>,<row id>\"` of the last row already read. Their `limit` defaults to 100 and "
+          + "runs from 1 to 2000. A grouped query returns one page of at most 500 groups, with `limit` "
+          + "defaulting to 100 and running from 1 to 500. A limit outside its range is refused with 400. The "
+          + "result carries its own "
           + "provenance, so a caller can tell an exact answer from a histogram-approximate one and a "
           + "complete result from a capped one. It is POST rather than GET because a spec with several "
           + "filters and a metric list outgrows a URL. Requires the monitor read permission.")
@@ -105,7 +106,7 @@ public class LogQueryResource extends AbstractMonitorResource {
           content = @Content(schema = @Schema(implementation = QueryResult.class))),
       @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)),
           description = "The spec named an unknown table, column, metric or operator, its cursor could not be "
-              + "read, or a grouped query asked for more than 500 rows"),
+              + "read, or its limit was outside the range its kind of query takes"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
@@ -114,8 +115,8 @@ public class LogQueryResource extends AbstractMonitorResource {
       @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
           description = "The query to run. Every field is optional and is normalized before use: `table` "
               + "defaults to the request log, `source` selects the raw log tables or the hourly rollups, and "
-              + "`limit` defaults to 100. A raw query's limit above 2000 is lowered to 2000; a grouped query's "
-              + "limit above 500 is refused.",
+              + "`limit` defaults to 100. A raw query takes a limit from 1 to 2000 and a grouped query one "
+              + "from 1 to 500; a limit outside that range is refused.",
           content = @Content(schema = @Schema(implementation = LogQuerySpec.class)))
       LogQuerySpec spec) throws CedarException {
     authorize(buildRequestContext());
@@ -262,7 +263,8 @@ public class LogQueryResource extends AbstractMonitorResource {
       @ApiResponse(responseCode = "200", description = "One row per handler, slowest in total first",
           content = @Content(schema = @Schema(implementation = QueryResult.class))),
       @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)),
-          description = "A bound was not an ISO-8601 instant, or `from` was not before `to`"),
+          description = "A bound was not an ISO-8601 instant, `from` was not before `to`, or `limit` was "
+              + "outside 1 to 500"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
@@ -273,7 +275,8 @@ public class LogQueryResource extends AbstractMonitorResource {
       @QueryParam(QP_FROM) String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
       @QueryParam(QP_TO) String to,
-      @Parameter(description = "How many rows to return. Defaults to 100 and is capped at 500.")
+      @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100. The answer is a "
+          + "single page; a limit outside the range is refused.")
       @QueryParam(QP_LIMIT) Integer limit) throws CedarException {
     authorize(buildRequestContext());
     PagedQuery.refusePageNumbers(uriInfo.getQueryParameters(), PagedQuery.pageNumbersWithdrawn(100, 500));
@@ -283,8 +286,10 @@ public class LogQueryResource extends AbstractMonitorResource {
       if (!fromI.isBefore(toI)) {
         throw new IllegalArgumentException("'from' must be before 'to'.");
       }
-      int cap = (limit == null || limit <= 0) ? 100 : Math.min(limit, 500);
-      return Response.ok().entity(dao.dbTimeShare(fromI, toI, cap)).build();
+      if (limit != null && (limit < 1 || limit > 500)) {
+        throw new IllegalArgumentException("db-share returns 1 to 500 rows; 'limit' was " + limit + ".");
+      }
+      return Response.ok().entity(dao.dbTimeShare(fromI, toI, limit == null ? 100 : limit)).build();
     } catch (DateTimeParseException e) {
       return badRequest(new IllegalArgumentException(
           "from/to must be ISO-8601 instants: " + e.getParsedString()));

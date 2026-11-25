@@ -684,7 +684,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "How many rows to return. Defaults to 100 and is capped at 500.",
+          "description" : "How many rows to return, from 1 to 500. Defaults to 100. The answer is a single page; a limit outside the range is refused.",
           "in" : "query",
           "name" : "limit",
           "schema" : {
@@ -711,7 +711,7 @@
                 }
               }
             },
-            "description" : "A bound was not an ISO-8601 instant, or `from` was not before `to`"
+            "description" : "A bound was not an ISO-8601 instant, `from` was not before `to`, or `limit` was outside 1 to 500"
           },
           "401" : {
             "content" : {
@@ -1204,7 +1204,7 @@
     },
     "/logs/query" : {
       "post" : {
-        "description" : "The one query surface the Explorer, the pivot view and every Insight board are built on. The body is a structured spec rather than SQL text: column names are resolved against an allowlist and values are bound, so a spec naming a column the engine does not know is rejected rather than run. An empty `groupBy` returns raw rows newest first, paged by the cursor the previous result handed back; a non-empty one returns an aggregate. The raw rows are a keyset walk rather than an offset-paged listing, so they do not use CEDAR's paging envelope. Their `cursor` is the `\"<iso-8601 instant>,<row id>\"` of the last row already read. Their `limit` defaults to 100, and a limit above 2000 is lowered to 2000. A grouped query returns one page of at most 500 groups, with `limit` defaulting to 100, and a limit above 500 is refused with 400. The result carries its own provenance, so a caller can tell an exact answer from a histogram-approximate one and a complete result from a capped one. It is POST rather than GET because a spec with several filters and a metric list outgrows a URL. Requires the monitor read permission.",
+        "description" : "The one query surface the Explorer, the pivot view and every Insight board are built on. The body is a structured spec rather than SQL text: column names are resolved against an allowlist and values are bound, so a spec naming a column the engine does not know is rejected rather than run. An empty `groupBy` returns raw rows newest first, paged by the cursor the previous result handed back; a non-empty one returns an aggregate. The raw rows are a keyset walk rather than an offset-paged listing, so they do not use CEDAR's paging envelope. Their `cursor` is the `\"<iso-8601 instant>,<row id>\"` of the last row already read. Their `limit` defaults to 100 and runs from 1 to 2000. A grouped query returns one page of at most 500 groups, with `limit` defaulting to 100 and running from 1 to 500. A limit outside its range is refused with 400. The result carries its own provenance, so a caller can tell an exact answer from a histogram-approximate one and a complete result from a capped one. It is POST rather than GET because a spec with several filters and a metric list outgrows a URL. Requires the monitor read permission.",
         "operationId" : "query",
         "requestBody" : {
           "content" : {
@@ -1214,7 +1214,7 @@
               }
             }
           },
-          "description" : "The query to run. Every field is optional and is normalized before use: `table` defaults to the request log, `source` selects the raw log tables or the hourly rollups, and `limit` defaults to 100. A raw query's limit above 2000 is lowered to 2000; a grouped query's limit above 500 is refused.",
+          "description" : "The query to run. Every field is optional and is normalized before use: `table` defaults to the request log, `source` selects the raw log tables or the hourly rollups, and `limit` defaults to 100. A raw query takes a limit from 1 to 2000 and a grouped query one from 1 to 500; a limit outside that range is refused.",
           "required" : true
         },
         "responses" : {
@@ -1236,7 +1236,7 @@
                 }
               }
             },
-            "description" : "The spec named an unknown table, column, metric or operator, its cursor could not be read, or a grouped query asked for more than 500 rows"
+            "description" : "The spec named an unknown table, column, metric or operator, its cursor could not be read, or its limit was outside the range its kind of query takes"
           },
           "401" : {
             "content" : {

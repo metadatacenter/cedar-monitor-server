@@ -446,13 +446,23 @@ public class LogListingPagingTest {
     assertEquals(200, postQuery(querySpec("[\"component\"]", 500)).statusCode());
     HttpResponse<String> over = postQuery(querySpec("[\"component\"]", 501));
     assertEquals(400, over.statusCode(), over.body());
-    assertTrue(over.body().contains("at most 500"), over.body());
+    assertTrue(over.body().contains("1 to 500"), over.body());
   }
 
   @Test
-  public void aRawQueryOver500IsNotRefusedBecauseItIsACursorWalk() throws Exception {
-    HttpResponse<String> response = postQuery(querySpec("[]", 2001));
-    assertEquals(200, response.statusCode(), response.body());
+  public void aRawQueryAcceptsALimitOf2000AndRefuses2001RatherThanLoweringIt() throws Exception {
+    HttpResponse<String> atCap = postQuery(querySpec("[]", 2000));
+    assertEquals(200, atCap.statusCode(), atCap.body());
+    HttpResponse<String> over = postQuery(querySpec("[]", 2001));
+    assertEquals(400, over.statusCode(), over.body());
+    assertTrue(over.body().contains("1 to 2000"), over.body());
+  }
+
+  @Test
+  public void dbShareAcceptsALimitOf500AndRefusesOneOutsideItsRange() throws Exception {
+    assertEquals(200, status("/logs/db-share?limit=500&" + RANGE));
+    assertEquals(400, status("/logs/db-share?limit=501&" + RANGE));
+    assertEquals(400, status("/logs/db-share?limit=0&" + RANGE));
   }
 
   @Test
