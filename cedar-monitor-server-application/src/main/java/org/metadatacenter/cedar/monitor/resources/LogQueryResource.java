@@ -43,7 +43,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 import static org.metadatacenter.constant.CedarPathParameters.PP_COLUMN;
-import static org.metadatacenter.constant.CedarPathParameters.PP_GLOBAL_REQUEST_ID;
+import static org.metadatacenter.constant.CedarPathParameters.PP_ID;
 import static org.metadatacenter.constant.CedarQueryParameters.QP_FROM;
 import static org.metadatacenter.constant.CedarQueryParameters.QP_LIMIT;
 import static org.metadatacenter.constant.CedarQueryParameters.QP_MAX_SPANS;
@@ -130,7 +130,7 @@ public class LogQueryResource extends AbstractMonitorResource {
   /** Distinct values + counts for one dimension, for the filter dropdowns. */
   @GET
   @Timed
-  @Path("/facets/{column}")
+  @Path("/facets/{" + PP_COLUMN + "}")
   @UnitOfWork
   @Operation(summary = "List the distinct values of one column, with their counts",
       description = "What a filter dropdown needs: every value the column took over the range, most frequent "
@@ -209,7 +209,7 @@ public class LogQueryResource extends AbstractMonitorResource {
    */
   @GET
   @Timed
-  @Path("/trace/{globalRequestId}")
+  @Path("/trace/{" + PP_ID + "}")
   @UnitOfWork
   @Operation(summary = "Resolve one global request identifier into a distributed trace",
       description = "One browser request fans out across microservices, so the identifier appears on several "
@@ -222,7 +222,7 @@ public class LogQueryResource extends AbstractMonitorResource {
       @ApiResponse(responseCode = "200", description = "The spans of the request and their cross-table totals",
           content = @Content(schema = @Schema(implementation = TraceResult.class))),
       @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)),
-          description = "The identifier was blank"),
+          description = "The identifier was blank, or the request sent maxSpans, which max_spans replaced"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
@@ -230,11 +230,12 @@ public class LogQueryResource extends AbstractMonitorResource {
   public Response trace(
       @Parameter(description = "The global request identifier to resolve. An identifier no log row carries "
           + "answers 200 with no spans.", required = true)
-      @PathParam(PP_GLOBAL_REQUEST_ID) String globalRequestId,
+      @PathParam(PP_ID) String globalRequestId,
       @Parameter(description = "How many spans to return per log table. Defaults to 500 and is capped at "
           + "2000. Passing the cap is how a pathological request stays cheap to look at.")
       @QueryParam(QP_MAX_SPANS) Integer maxSpans) throws CedarException {
     authorize(buildRequestContext());
+    refuseRenamedParameter("maxSpans", QP_MAX_SPANS);
     try {
       int cap = (maxSpans == null || maxSpans <= 0) ? DEFAULT_MAX_SPANS : Math.min(maxSpans, MAX_SPANS);
       return Response.ok().entity(dao.trace(globalRequestId, cap)).build();

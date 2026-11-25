@@ -205,7 +205,7 @@ public class LogListingPagingTest {
     seedRequests(9, "/folders/", 0);
     seedRequests(6, "/templates/", 100);
 
-    JsonNode page = get("/logs/explorer/requests?q=templates&limit=4&minDurationMs=0");
+    JsonNode page = get("/logs/explorer/requests?q=templates&limit=4&min_duration_ms=0");
 
     assertEquals(6, page.get("totalCount").asLong());
     for (JsonNode row : page.get("requests")) {
@@ -213,7 +213,7 @@ public class LogListingPagingTest {
     }
     String next = page.get("paging").get("next").asText();
     assertEquals("templates", param(next, "q"));
-    assertEquals("0", param(next, "minDurationMs"));
+    assertEquals("0", param(next, "min_duration_ms"));
     assertEquals("4", param(next, "offset"));
     assertEquals(2, get(pathOf(next)).get("requests").size());
   }
@@ -223,7 +223,7 @@ public class LogListingPagingTest {
     seedRequests(5, "/fast/", 0);
     seedRequestsWithDuration(3, "/slow/", 5_000_000_000L);
 
-    JsonNode page = get("/logs/explorer/requests?minDurationMs=1000");
+    JsonNode page = get("/logs/explorer/requests?min_duration_ms=1000");
 
     assertEquals(3, page.get("totalCount").asLong());
     assertEquals(3, page.get("requests").size());
@@ -261,6 +261,41 @@ public class LogListingPagingTest {
             .asText(null), route + " " + name + " -> " + response.body());
       }
     }
+  }
+
+  /**
+   * The duration filter and the span cap were renamed onto snake_case. An old name is refused rather
+   * than ignored, since ignoring it would answer without the filter the caller asked for.
+   */
+  @Test
+  public void aParameterUnderItsOldNameIsRefusedNamingIt() throws Exception {
+    Map<String, String> retired = new LinkedHashMap<>();
+    retired.put("/logs/explorer/requests?minDurationMs=1000", "minDurationMs");
+    retired.put("/logs/explorer/cypher?minDurationMs=1000", "minDurationMs");
+    retired.put("/logs/trace/req-1?maxSpans=1000", "maxSpans");
+    for (Map.Entry<String, String> entry : retired.entrySet()) {
+      HttpResponse<String> response = send(entry.getKey());
+      assertEquals(400, response.statusCode(), entry.getKey() + " -> " + response.body());
+      assertEquals("1000", JsonMapper.STRICT_MAPPER.readTree(response.body()).path("parameters")
+          .path(entry.getValue()).asText(null), entry.getKey() + " -> " + response.body());
+    }
+  }
+
+  @Test
+  public void theTraceCapsItsSpansAtMaxSpans() throws Exception {
+    List<Map<String, Object>> rows = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      Map<String, Object> row = requestRow("/templates/", NOW.minusSeconds(i), 1_000_000L);
+      row.put("globalRequestId", "trace-capped");
+      rows.add(row);
+    }
+    insert("log_request", rows);
+
+    JsonNode trace = get("/logs/trace/trace-capped?max_spans=2");
+
+    assertEquals(2, trace.get("spans").size());
+    assertTrue(trace.get("truncated").asBoolean(), trace.toString());
+    assertFalse(get("/logs/trace/trace-capped").get("truncated").asBoolean());
   }
 
   // ---- raw Cypher log --------------------------------------------------------------------------

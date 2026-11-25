@@ -74,7 +74,7 @@ public class LogExplorerResource extends AbstractMonitorResource {
       @ApiResponse(responseCode = "200", description = "A page of matching request rows, newest first. Counting stops at 10,500 matches, "
           + "and countCapped then reports that totalCount is a lower bound",
           content = @Content(schema = @Schema(implementation = RequestRowPage.class))),
-      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The limit or offset is out of range"),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The limit or offset is out of range, or the request sent minDurationMs, which min_duration_ms replaced"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
@@ -91,6 +91,7 @@ public class LogExplorerResource extends AbstractMonitorResource {
       @Parameter(description = "How many matching rows to skip, from 0 to 10000. Defaults to 0.")
       @QueryParam(QP_OFFSET) Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
+    refuseRenamedParameter("minDurationMs", QP_MIN_DURATION_MS);
     PagedQuery page = rawPage(limit, offset);
     long minNanos = nanos(minDurationMs);
     long total = dao.countRequests(q, minNanos, RAW_COUNT_CAP);
@@ -112,7 +113,7 @@ public class LogExplorerResource extends AbstractMonitorResource {
       @ApiResponse(responseCode = "200", description = "A page of matching Cypher rows, newest first. Counting stops at 10,500 matches, "
           + "and countCapped then reports that totalCount is a lower bound",
           content = @Content(schema = @Schema(implementation = CypherRowPage.class))),
-      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The limit or offset is out of range"),
+      @ApiResponse(responseCode = "400", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The limit or offset is out of range, or the request sent minDurationMs, which min_duration_ms replaced"),
       @ApiResponse(responseCode = "401", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Unauthorized"),
       @ApiResponse(responseCode = "403", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The caller lacks the monitor read permission"),
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "The log database could not be read")
@@ -129,6 +130,7 @@ public class LogExplorerResource extends AbstractMonitorResource {
       @Parameter(description = "How many matching rows to skip, from 0 to 10000. Defaults to 0.")
       @QueryParam(QP_OFFSET) Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
+    refuseRenamedParameter("minDurationMs", QP_MIN_DURATION_MS);
     PagedQuery page = rawPage(limit, offset);
     long minNanos = nanos(minDurationMs);
     long total = dao.countCypher(q, minNanos, RAW_COUNT_CAP);

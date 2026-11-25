@@ -765,7 +765,7 @@
         }, {
           "description" : "Keep only statements that took at least this many milliseconds. Zero and negative values are treated as no filter.",
           "in" : "query",
-          "name" : "minDurationMs",
+          "name" : "min_duration_ms",
           "schema" : {
             "type" : "integer",
             "format" : "int64"
@@ -806,7 +806,7 @@
                 }
               }
             },
-            "description" : "The limit or offset is out of range"
+            "description" : "The limit or offset is out of range, or the request sent minDurationMs, which min_duration_ms replaced"
           },
           "401" : {
             "content" : {
@@ -1028,7 +1028,7 @@
         }, {
           "description" : "Keep only requests whose handler took at least this many milliseconds. Zero and negative values are treated as no filter.",
           "in" : "query",
-          "name" : "minDurationMs",
+          "name" : "min_duration_ms",
           "schema" : {
             "type" : "integer",
             "format" : "int64"
@@ -1069,7 +1069,7 @@
                 }
               }
             },
-            "description" : "The limit or offset is out of range"
+            "description" : "The limit or offset is out of range, or the request sent minDurationMs, which min_duration_ms replaced"
           },
           "401" : {
             "content" : {
@@ -1276,14 +1276,14 @@
         "tags" : [ "Log query" ]
       }
     },
-    "/logs/trace/{globalRequestId}" : {
+    "/logs/trace/{id}" : {
       "get" : {
         "description" : "One browser request fans out across microservices, so the identifier appears on several rows, and that fan-out is what this route shows. It returns one span per component that handled the request and one per Cypher statement underneath it, on a shared timeline, with the summed handler time, the summed database time and the share the second is of the first. A handler that is slow with a low share is slow for reasons other than the database. Spans overlap, so the summed times are not wall time; `spanMs` is. Requires the monitor read permission.",
         "operationId" : "trace",
         "parameters" : [ {
           "description" : "The global request identifier to resolve. An identifier no log row carries answers 200 with no spans.",
           "in" : "path",
-          "name" : "globalRequestId",
+          "name" : "id",
           "required" : true,
           "schema" : {
             "type" : "string"
@@ -1291,7 +1291,7 @@
         }, {
           "description" : "How many spans to return per log table. Defaults to 500 and is capped at 2000. Passing the cap is how a pathological request stays cheap to look at.",
           "in" : "query",
-          "name" : "maxSpans",
+          "name" : "max_spans",
           "schema" : {
             "type" : "integer",
             "format" : "int32"
@@ -1316,7 +1316,7 @@
                 }
               }
             },
-            "description" : "The identifier was blank"
+            "description" : "The identifier was blank, or the request sent maxSpans, which max_spans replaced"
           },
           "401" : {
             "content" : {

@@ -10,6 +10,7 @@ import org.metadatacenter.exception.CedarDependencyUnavailableException;
 import org.metadatacenter.exception.CedarException;
 import org.metadatacenter.exception.CedarProcessingException;
 import org.metadatacenter.model.ServerName;
+import org.metadatacenter.rest.exception.CedarAssertionException;
 import org.metadatacenter.rest.context.CedarRequestContext;
 import org.metadatacenter.util.http.CedarResponse;
 import org.metadatacenter.util.http.ProxyUtil;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractMonitorResource extends CedarMicroserviceResource {
@@ -37,6 +39,19 @@ public abstract class AbstractMonitorResource extends CedarMicroserviceResource 
 
   public AbstractMonitorResource(CedarConfig cedarConfig, CedarDataServices dataServices) {
     super(cedarConfig, dataServices);
+  }
+
+  /**
+   * Refuses a request that sends a query parameter under the name it had before it was renamed. The
+   * old name would otherwise be ignored, and the answer would silently lose the filter it asked for.
+   */
+  protected void refuseRenamedParameter(String oldName, String newName) throws CedarException {
+    List<String> values = uriInfo.getQueryParameters().get(oldName);
+    if (values != null) {
+      String value = values.isEmpty() ? null : values.get(0);
+      throw new CedarAssertionException(oldName + " is no longer supported. Send " + newName + " instead.")
+          .parameter(oldName, value).badRequest();
+    }
   }
 
   /** One read of a store a diagnostic answer reports on. */
