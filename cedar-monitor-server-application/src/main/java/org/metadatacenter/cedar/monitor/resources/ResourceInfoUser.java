@@ -47,7 +47,7 @@ import java.util.Map;
 import static org.metadatacenter.constant.CedarPathParameters.PP_ID;
 import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
 
-@Path("/resource")
+@Path("/resources")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Diagnostics")
 @SecurityRequirement(name = "api_key")
@@ -69,7 +69,7 @@ public class ResourceInfoUser extends AbstractMonitorResource {
 
   @GET
   @Timed
-  @Path("/users")
+  @Path("/users/{" + PP_ID + "}")
   @Operation(summary = "Get everything CEDAR knows about a user",
       description = "Gather what each store holds about one user into a single answer: the workspace graph's record of it, the counts it can reach in each store, its group memberships, and the Keycloak account behind it. "
           + "Written for diagnosis rather than for an application: the point is to see the stores "
@@ -86,8 +86,8 @@ public class ResourceInfoUser extends AbstractMonitorResource {
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getUserInfo(
-      @Parameter(description = "Identifier of the user to report on.", required = true)
-      @QueryParam(PP_ID) String id) throws CedarException {
+      @Parameter(description = "Identifier of the user to report on, percent-encoded as one path segment.", required = true)
+      @PathParam(PP_ID) String id) throws CedarException {
 
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);

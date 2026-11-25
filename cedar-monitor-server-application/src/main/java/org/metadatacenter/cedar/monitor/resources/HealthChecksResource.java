@@ -27,7 +27,7 @@ import jakarta.ws.rs.core.MediaType;
 import static org.metadatacenter.constant.CedarPathParameters.PP_SERVER;
 import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
 
-@Path("/health-check")
+@Path("/healthcheck/{" + PP_SERVER + "}")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Health checks")
 @SecurityRequirement(name = "api_key")
@@ -44,7 +44,6 @@ public class HealthChecksResource extends AbstractMonitorResource {
 
   @GET
   @Timed
-  @Path("/{server}")
   @Operation(summary = "Get another server's health check",
       description = "Proxy the named server's health check. The status and body are the other "
           + "server's own, so a 500 here can mean that server is unhealthy rather than that this "

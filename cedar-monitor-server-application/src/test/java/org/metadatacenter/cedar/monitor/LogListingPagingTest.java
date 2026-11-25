@@ -251,6 +251,18 @@ public class LogListingPagingTest {
     assertEquals(200, status("/logs/explorer/requests?limit=500"));
   }
 
+  @Test
+  public void aPageNumberParameterIsRefusedNamingIt() throws Exception {
+    for (String route : List.of("/logs/explorer/requests", "/logs/explorer/cypher")) {
+      for (String name : List.of("page", "pageSize", "page_size")) {
+        HttpResponse<String> response = send(route + "?" + name + "=2");
+        assertEquals(400, response.statusCode(), route + " " + name + " -> " + response.body());
+        assertEquals("2", JsonMapper.STRICT_MAPPER.readTree(response.body()).path("parameters").path(name)
+            .asText(null), route + " " + name + " -> " + response.body());
+      }
+    }
+  }
+
   // ---- raw Cypher log --------------------------------------------------------------------------
 
   @Test

@@ -39,6 +39,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.metadatacenter.constant.CedarQueryParameters.QP_FROM;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_LIMIT;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_OFFSET;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_TO;
+
 /**
  * Read side of the log aggregation: date-range usage + pattern detection over the {@code agg_*} rollups
  * (the "Usage &amp; Patterns" internals page). All endpoints are {@code MONITOR_READ}-gated and
@@ -78,9 +83,9 @@ public class LogUsageResource extends AbstractMonitorResource {
   public Response summary(
       @Parameter(description = "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults to seven days "
           + "before the upper bound.")
-      @QueryParam("from") String from,
+      @QueryParam(QP_FROM) String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
-      @QueryParam("to") String to) throws CedarException {
+      @QueryParam(QP_TO) String to) throws CedarException {
     authorize(buildRequestContext());
     Instant[] range = range(from, to);
     Map<String, Object> r = new HashMap<>();
@@ -111,13 +116,13 @@ public class LogUsageResource extends AbstractMonitorResource {
   public Response endpoints(
       @Parameter(description = "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults to seven days "
           + "before the upper bound.")
-      @QueryParam("from") String from,
+      @QueryParam(QP_FROM) String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
-      @QueryParam("to") String to,
+      @QueryParam(QP_TO) String to,
       @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
-      @QueryParam("limit") Optional<Integer> limit,
+      @QueryParam(QP_LIMIT) Optional<Integer> limit,
       @Parameter(description = "How many rows to skip. Defaults to 0.")
-      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
+      @QueryParam(QP_OFFSET) Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     Instant[] range = range(from, to);
     PagedQuery page = page(limit, offset);
@@ -147,13 +152,13 @@ public class LogUsageResource extends AbstractMonitorResource {
   public Response cypher(
       @Parameter(description = "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults to seven days "
           + "before the upper bound.")
-      @QueryParam("from") String from,
+      @QueryParam(QP_FROM) String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
-      @QueryParam("to") String to,
+      @QueryParam(QP_TO) String to,
       @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
-      @QueryParam("limit") Optional<Integer> limit,
+      @QueryParam(QP_LIMIT) Optional<Integer> limit,
       @Parameter(description = "How many rows to skip. Defaults to 0.")
-      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
+      @QueryParam(QP_OFFSET) Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     Instant[] range = range(from, to);
     PagedQuery page = page(limit, offset);
@@ -181,13 +186,13 @@ public class LogUsageResource extends AbstractMonitorResource {
   public Response users(
       @Parameter(description = "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults to seven days "
           + "before the upper bound.")
-      @QueryParam("from") String from,
+      @QueryParam(QP_FROM) String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
-      @QueryParam("to") String to,
+      @QueryParam(QP_TO) String to,
       @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
-      @QueryParam("limit") Optional<Integer> limit,
+      @QueryParam(QP_LIMIT) Optional<Integer> limit,
       @Parameter(description = "How many rows to skip. Defaults to 0.")
-      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
+      @QueryParam(QP_OFFSET) Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     Instant[] range = range(from, to);
     PagedQuery page = page(limit, offset);
@@ -218,9 +223,9 @@ public class LogUsageResource extends AbstractMonitorResource {
   public Response insights(
       @Parameter(description = "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults to seven days "
           + "before the upper bound.")
-      @QueryParam("from") String from,
+      @QueryParam(QP_FROM) String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
-      @QueryParam("to") String to) throws CedarException {
+      @QueryParam(QP_TO) String to) throws CedarException {
     authorize(buildRequestContext());
     Instant[] range = range(from, to);
     List<CypherStat> cy = dao.cypherBreakdown(range[0], range[1], 100);
@@ -258,8 +263,9 @@ public class LogUsageResource extends AbstractMonitorResource {
     c.must(c.user()).have(CedarPermission.MONITOR_READ);
   }
 
-  private static PagedQuery page(Optional<Integer> limit, Optional<Integer> offset) throws CedarException {
-    PagedQuery page = new PagedQuery(DEFAULT_LIMIT, MAX_LIMIT).limit(limit).offset(offset);
+  private PagedQuery page(Optional<Integer> limit, Optional<Integer> offset) throws CedarException {
+    PagedQuery page = new PagedQuery(DEFAULT_LIMIT, MAX_LIMIT).limit(limit).offset(offset)
+        .queryParameters(uriInfo.getQueryParameters());
     page.validate();
     return page;
   }

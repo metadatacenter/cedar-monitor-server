@@ -41,6 +41,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 
+import static org.metadatacenter.constant.CedarQueryParameters.QP_EXACT;
 import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
 
 /**
@@ -124,7 +125,7 @@ public class MySqlCountsResource extends AbstractMonitorResource {
   })
   public Response mySqlCounts(
       @Parameter(description = "Count rows with COUNT(*) instead of reading the optimizer's estimate")
-      @QueryParam("exact") @DefaultValue("false") boolean exact) throws CedarException {
+      @QueryParam(QP_EXACT) @DefaultValue("false") boolean exact) throws CedarException {
 
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);

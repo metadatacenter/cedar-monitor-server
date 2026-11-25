@@ -29,6 +29,12 @@ import jakarta.ws.rs.core.Response;
 
 import java.util.Optional;
 
+import static org.metadatacenter.constant.CedarQueryParameters.QP_KIND;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_LIMIT;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_MIN_DURATION_MS;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_OFFSET;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_Q;
+
 /**
  * Live Log Explorer — row-level forensic queries over the RAW log tables (last ≤30 days, before the
  * prune), the complement to the aggregated {@link LogUsageResource}. MONITOR_READ-gated, {@code @UnitOfWork}.
@@ -76,14 +82,14 @@ public class LogExplorerResource extends AbstractMonitorResource {
   public Response requests(
       @Parameter(description = "Free-text filter, matched as a substring against the path, the user "
           + "identifier, the handler class and the global request identifier. Omit to match every row.")
-      @QueryParam("q") String q,
+      @QueryParam(QP_Q) String q,
       @Parameter(description = "Keep only requests whose handler took at least this many milliseconds. "
           + "Zero and negative values are treated as no filter.")
-      @QueryParam("minDurationMs") Long minDurationMs,
+      @QueryParam(QP_MIN_DURATION_MS) Long minDurationMs,
       @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
-      @QueryParam("limit") Optional<Integer> limit,
+      @QueryParam(QP_LIMIT) Optional<Integer> limit,
       @Parameter(description = "How many matching rows to skip, from 0 to 10000. Defaults to 0.")
-      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
+      @QueryParam(QP_OFFSET) Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     PagedQuery page = rawPage(limit, offset);
     long minNanos = nanos(minDurationMs);
@@ -114,14 +120,14 @@ public class LogExplorerResource extends AbstractMonitorResource {
   public Response cypher(
       @Parameter(description = "Free-text filter, matched as a substring against the operation name, the "
           + "statement hash, the handler class and the statement text. Omit to match every row.")
-      @QueryParam("q") String q,
+      @QueryParam(QP_Q) String q,
       @Parameter(description = "Keep only statements that took at least this many milliseconds. Zero and "
           + "negative values are treated as no filter.")
-      @QueryParam("minDurationMs") Long minDurationMs,
+      @QueryParam(QP_MIN_DURATION_MS) Long minDurationMs,
       @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
-      @QueryParam("limit") Optional<Integer> limit,
+      @QueryParam(QP_LIMIT) Optional<Integer> limit,
       @Parameter(description = "How many matching rows to skip, from 0 to 10000. Defaults to 0.")
-      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
+      @QueryParam(QP_OFFSET) Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     PagedQuery page = rawPage(limit, offset);
     long minNanos = nanos(minDurationMs);
@@ -151,11 +157,11 @@ public class LogExplorerResource extends AbstractMonitorResource {
   public Response requestOutliers(
       @Parameter(description = "Which kind of outlier to return, `SLOW` or `ERROR`. Matched case-insensitively. "
           + "Omit to return both.", schema = @Schema(allowableValues = {"SLOW", "ERROR"}))
-      @QueryParam("kind") String kind,
+      @QueryParam(QP_KIND) String kind,
       @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
-      @QueryParam("limit") Optional<Integer> limit,
+      @QueryParam(QP_LIMIT) Optional<Integer> limit,
       @Parameter(description = "How many rows to skip. Defaults to 0.")
-      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
+      @QueryParam(QP_OFFSET) Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     PagedQuery page = page(limit, offset);
     return Response.ok().entity(new RequestRowPage(
@@ -182,9 +188,9 @@ public class LogExplorerResource extends AbstractMonitorResource {
   })
   public Response cypherOutliers(
       @Parameter(description = "How many rows to return, from 1 to 500. Defaults to 100.")
-      @QueryParam("limit") Optional<Integer> limit,
+      @QueryParam(QP_LIMIT) Optional<Integer> limit,
       @Parameter(description = "How many rows to skip. Defaults to 0.")
-      @QueryParam("offset") Optional<Integer> offset) throws CedarException {
+      @QueryParam(QP_OFFSET) Optional<Integer> offset) throws CedarException {
     authorize(buildRequestContext());
     PagedQuery page = page(limit, offset);
     return Response.ok().entity(new CypherRowPage(
@@ -209,15 +215,16 @@ public class LogExplorerResource extends AbstractMonitorResource {
     return (ms == null || ms <= 0) ? 0L : ms * 1_000_000L;
   }
 
-  private static PagedQuery page(Optional<Integer> limit, Optional<Integer> offset) throws CedarException {
-    PagedQuery page = new PagedQuery(DEFAULT_LIMIT, MAX_LIMIT).limit(limit).offset(offset);
+  private PagedQuery page(Optional<Integer> limit, Optional<Integer> offset) throws CedarException {
+    PagedQuery page = new PagedQuery(DEFAULT_LIMIT, MAX_LIMIT).limit(limit).offset(offset)
+        .queryParameters(uriInfo.getQueryParameters());
     page.validate();
     return page;
   }
 
-  private static PagedQuery rawPage(Optional<Integer> limit, Optional<Integer> offset) throws CedarException {
+  private PagedQuery rawPage(Optional<Integer> limit, Optional<Integer> offset) throws CedarException {
     PagedQuery page = new PagedQuery(DEFAULT_LIMIT, MAX_LIMIT).limit(limit).offset(offset)
-        .maxOffset(RAW_MAX_OFFSET);
+        .maxOffset(RAW_MAX_OFFSET).queryParameters(uriInfo.getQueryParameters());
     page.validate();
     return page;
   }

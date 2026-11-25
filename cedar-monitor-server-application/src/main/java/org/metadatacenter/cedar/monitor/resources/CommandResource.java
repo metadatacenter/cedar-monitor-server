@@ -32,10 +32,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.metadatacenter.constant.CedarPathParameters.PP_INPUT;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_INPUT;
 import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
 
-@Path("/command")
+@Path("/resources")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Diagnostics")
 @SecurityRequirement(name = "api_key")
@@ -62,7 +62,7 @@ public class CommandResource extends AbstractMonitorResource {
 
   @GET
   @Timed
-  @Path("/resource-id-lookup")
+  @Path("/lookup")
   @Operation(summary = "Work out which artifact a string refers to",
       description = "Take anything that might name a CEDAR artifact — an identifier, an IRI, a URL "
           + "from the workbench, a path with a query string — and report the artifact identifier it "
@@ -79,7 +79,7 @@ public class CommandResource extends AbstractMonitorResource {
   public Response lookUpResource(
       @Parameter(description = "The string to resolve. Leading and trailing space is trimmed; the "
           + "sanitized form is echoed in the response.")
-      @QueryParam(PP_INPUT) String input) throws CedarException {
+      @QueryParam(QP_INPUT) String input) throws CedarException {
 
     CedarRequestContext c = buildRequestContext();
     c.must(c.user()).be(LoggedIn);

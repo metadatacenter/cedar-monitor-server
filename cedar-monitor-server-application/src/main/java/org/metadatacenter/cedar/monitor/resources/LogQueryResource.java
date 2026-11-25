@@ -35,11 +35,20 @@ import org.metadatacenter.server.logging.query.LogQuerySpec;
 import org.metadatacenter.server.security.model.auth.CedarPermission;
 import org.metadatacenter.util.http.CedarError;
 import org.metadatacenter.util.http.CedarResponse;
+import org.metadatacenter.util.http.PagedQuery;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
+
+import static org.metadatacenter.constant.CedarPathParameters.PP_COLUMN;
+import static org.metadatacenter.constant.CedarPathParameters.PP_GLOBAL_REQUEST_ID;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_FROM;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_LIMIT;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_MAX_SPANS;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_TABLE;
+import static org.metadatacenter.constant.CedarQueryParameters.QP_TO;
 
 /**
  * Structured query engine over the log tables — the one backend the Explorer, the pivot view and every
@@ -137,14 +146,14 @@ public class LogQueryResource extends AbstractMonitorResource {
   })
   public Response facet(
       @Parameter(description = "The column to enumerate, named as the coverage route names it.", required = true)
-      @PathParam("column") String column,
+      @PathParam(PP_COLUMN) String column,
       @Parameter(description = "Which log table to read. Defaults to the request log.")
-      @QueryParam("table") String table,
+      @QueryParam(QP_TABLE) String table,
       @Parameter(description = "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults to 24 hours "
           + "before the upper bound.")
-      @QueryParam("from") String from,
+      @QueryParam(QP_FROM) String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
-      @QueryParam("to") String to) throws CedarException {
+      @QueryParam(QP_TO) String to) throws CedarException {
     authorize(buildRequestContext());
     try {
       Instant toI = to == null ? Instant.now() : Instant.parse(to);
@@ -220,10 +229,10 @@ public class LogQueryResource extends AbstractMonitorResource {
   public Response trace(
       @Parameter(description = "The global request identifier to resolve. An identifier no log row carries "
           + "answers 200 with no spans.", required = true)
-      @PathParam("globalRequestId") String globalRequestId,
+      @PathParam(PP_GLOBAL_REQUEST_ID) String globalRequestId,
       @Parameter(description = "How many spans to return per log table. Defaults to 500 and is capped at "
           + "2000. Passing the cap is how a pathological request stays cheap to look at.")
-      @QueryParam("maxSpans") Integer maxSpans) throws CedarException {
+      @QueryParam(QP_MAX_SPANS) Integer maxSpans) throws CedarException {
     authorize(buildRequestContext());
     try {
       int cap = (maxSpans == null || maxSpans <= 0) ? DEFAULT_MAX_SPANS : Math.min(maxSpans, MAX_SPANS);
@@ -261,12 +270,13 @@ public class LogQueryResource extends AbstractMonitorResource {
   public Response dbShare(
       @Parameter(description = "Inclusive lower bound, as an ISO-8601 instant in UTC. Defaults to seven days "
           + "before the upper bound.")
-      @QueryParam("from") String from,
+      @QueryParam(QP_FROM) String from,
       @Parameter(description = "Exclusive upper bound, as an ISO-8601 instant in UTC. Defaults to now.")
-      @QueryParam("to") String to,
+      @QueryParam(QP_TO) String to,
       @Parameter(description = "How many rows to return. Defaults to 100 and is capped at 500.")
-      @QueryParam("limit") Integer limit) throws CedarException {
+      @QueryParam(QP_LIMIT) Integer limit) throws CedarException {
     authorize(buildRequestContext());
+    PagedQuery.refusePageNumbers(uriInfo.getQueryParameters(), PagedQuery.pageNumbersWithdrawn(100, 500));
     try {
       Instant toI = to == null ? Instant.now() : Instant.parse(to);
       Instant fromI = from == null ? toI.minus(Duration.ofDays(7)) : Instant.parse(from);

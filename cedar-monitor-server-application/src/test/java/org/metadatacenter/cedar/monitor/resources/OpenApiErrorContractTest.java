@@ -11,7 +11,7 @@ class OpenApiErrorContractTest {
   @Test
   void errorResponsesPublishTheCommonSchema() throws IOException {
     try (InputStream input = getClass().getResourceAsStream("/assets/swagger-api/swagger.json")) {
-      OpenApiErrorContract.assertDocumented(input, "GET /health-check/{server} 500");
+      OpenApiErrorContract.assertDocumented(input, "GET /healthcheck/{server} 500");
     }
   }
 }

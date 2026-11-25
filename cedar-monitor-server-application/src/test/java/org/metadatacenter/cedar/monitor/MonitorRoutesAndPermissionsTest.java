@@ -227,7 +227,7 @@ public class MonitorRoutesAndPermissionsTest {
     for (Map.Entry<String, String> entry : cases.entrySet()) {
       HttpRequest request = HttpRequest.newBuilder()
           .uri(URI.create("http://localhost:" + SERVER.getLocalPort()
-              + "/command/resource-id-lookup?input=" + URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)))
+              + "/resources/lookup?input=" + URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8)))
           .header("Authorization", adminUserAuthHeader)
           .GET().build();
       HttpResponse<String> response = CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
@@ -247,7 +247,7 @@ public class MonitorRoutesAndPermissionsTest {
   }
 
   private static JsonNode lookUp(String input) throws Exception {
-    HttpResponse<String> response = adminGet("/command/resource-id-lookup"
+    HttpResponse<String> response = adminGet("/resources/lookup"
         + (input == null ? "" : "?input=" + URLEncoder.encode(input, StandardCharsets.UTF_8)));
     Assertions.assertEquals(200, response.statusCode(), input + ": " + response.body());
     return JsonMapper.STRICT_MAPPER.readTree(response.body());
@@ -351,8 +351,8 @@ public class MonitorRoutesAndPermissionsTest {
   public void anUnknownArtifactIdentifierIsAnEmptyAnswerRatherThanAFailure() throws Exception {
     for (String route : new String[] {"templates", "template-elements", "template-fields", "template-instances"}) {
       HttpRequest request = HttpRequest.newBuilder()
-          .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/resource/" + route
-              + "?id=" + URLEncoder.encode("https://repo.metadatacenter.orgx/templates/nothing-knows-this",
+          .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/resources/" + route
+              + "/" + URLEncoder.encode("https://repo.metadatacenter.orgx/templates/nothing-knows-this",
               StandardCharsets.UTF_8)))
           .header("Authorization", adminUserAuthHeader)
           .GET()
@@ -394,7 +394,7 @@ public class MonitorRoutesAndPermissionsTest {
   @Test
   public void stoppedServiceHealthCheckIsServiceUnavailable() throws Exception {
     HttpRequest request = HttpRequest.newBuilder()
-        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/health-check/artifact"))
+        .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + "/healthcheck/artifact"))
         .header("Authorization", adminUserAuthHeader)
         .GET()
         .build();
@@ -452,11 +452,67 @@ public class MonitorRoutesAndPermissionsTest {
     Assertions.assertFalse(response.body().contains("127.0.0.1"));
   }
 
+  /**
+   * The health check proxy, the artifact diagnostics and the identifier lookup moved to the paths
+   * the other servers' routes follow. The old paths are gone rather than kept as aliases, so an
+   * administrator who is admitted to every route still finds nothing there.
+   */
+  @Test
+  public void theRetiredDiagnosticPathsAnswerNotFound() throws Exception {
+    String id = URLEncoder.encode("https://repo.metadatacenter.orgx/templates/nothing-knows-this",
+        StandardCharsets.UTF_8);
+    StringBuilder failures = new StringBuilder();
+    for (String path : List.of("/health-check/artifact", "/health-check/monitor",
+        "/command/resource-id-lookup?input=" + id,
+        "/resource/templates?id=" + id, "/resource/template-elements?id=" + id,
+        "/resource/template-fields?id=" + id, "/resource/template-instances?id=" + id,
+        "/resource/folders?id=" + id, "/resource/users?id=" + id, "/resource/groups?id=" + id)) {
+      int status = adminGet(path).statusCode();
+      if (status != 404) {
+        failures.append(path).append(": ").append(status).append('\n');
+      }
+    }
+    Assertions.assertEquals(0, failures.length(), failures.toString());
+  }
+
+  /**
+   * The proxy at /healthcheck/{server} sits beside the monitor's own /healthcheck, which every
+   * server publishes. The bare path still runs the monitor's own checks rather than reaching the
+   * proxy with an empty server name.
+   */
+  @Test
+  public void theMonitorsOwnHealthCheckIsNotShadowedByTheProxy() throws Exception {
+    HttpResponse<String> response = adminGet("/healthcheck");
+    Assertions.assertTrue(response.statusCode() == 200 || response.statusCode() == 500,
+        response.statusCode() + ": " + response.body());
+    JsonNode report = JsonMapper.STRICT_MAPPER.readTree(response.body());
+    Assertions.assertTrue(report.has("deadlocks"),
+        "Dropwizard's own checks should be in the monitor's report: " + response.body());
+  }
+
+  /**
+   * The diagnostics take their identifier as a path segment beside /resources/counts and
+   * /resources/lookup. Neither of those is read as an artifact kind, and an identifier that is a
+   * full IRI reaches the route intact with its slashes percent-encoded.
+   */
+  @Test
+  public void theResourceRoutesDoNotCaptureOneAnother() throws Exception {
+    for (String path : List.of("/resources/counts", "/resources/counts/opensearch")) {
+      HttpResponse<String> response = adminGet(path);
+      Assertions.assertEquals(503, response.statusCode(), path + ": " + response.body());
+    }
+    JsonNode lookup = lookUp("https://repo.metadatacenter.orgx/templates/12345678-abcd-1234-abcd-123456789012");
+    Assertions.assertTrue(lookup.path("success").asBoolean(), lookup.toString());
+    HttpResponse<String> unknownKind = adminGet("/resources/widgets/"
+        + URLEncoder.encode("https://repo.metadatacenter.orgx/widgets/x", StandardCharsets.UTF_8));
+    Assertions.assertEquals(404, unknownKind.statusCode(), unknownKind.body());
+  }
+
   /** Sends the endpoint's request with an Authorization header; records transport errors. */
   private int statusWithAuth(RouteSurface.Endpoint endpoint, String authHeader, StringBuilder failures) {
     try {
       HttpRequest.Builder builder = HttpRequest.newBuilder()
-          // resolvedPath, not fullPath: health-check declares /{server}, and an unsubstituted
+          // resolvedPath, not fullPath: the health check proxy declares /{server}, and an unsubstituted
           // template variable would not match the route.
           .uri(URI.create("http://localhost:" + SERVER.getLocalPort() + RouteSurface.resolvedPath(endpoint)))
           .header("Authorization", authHeader);

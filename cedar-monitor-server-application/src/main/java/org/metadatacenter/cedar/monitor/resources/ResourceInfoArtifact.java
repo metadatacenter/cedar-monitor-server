@@ -49,7 +49,7 @@ import static org.metadatacenter.rest.assertion.GenericAssertions.LoggedIn;
  * <p>Each route keeps its own path and its own OpenAPI entry, because a caller diagnosing a template
  * instance should not have to know that templates share the code. Only the body is shared.
  */
-@Path("/resource")
+@Path("/resources")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Diagnostics")
 @SecurityRequirement(name = "api_key")
@@ -69,7 +69,7 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
 
   @GET
   @Timed
-  @Path("/templates")
+  @Path("/templates/{" + PP_ID + "}")
   @Operation(summary = "Get everything CEDAR knows about a template",
       description = "Gather what each store holds about one template into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. "
           + "Written for diagnosis rather than for an application: the point is to see the stores "
@@ -86,14 +86,14 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getTemplateInfo(
-      @Parameter(description = "Identifier of the template to report on.", required = true)
-      @QueryParam(PP_ID) String id) throws CedarException {
+      @Parameter(description = "Identifier of the template to report on, percent-encoded as one path segment.", required = true)
+      @PathParam(PP_ID) String id) throws CedarException {
     return artifactInfo(id, org.metadatacenter.model.CedarResourceType.TEMPLATE);
   }
 
   @GET
   @Timed
-  @Path("/template-elements")
+  @Path("/template-elements/{" + PP_ID + "}")
   @Operation(summary = "Get everything CEDAR knows about a template element",
       description = "Gather what each store holds about one template element into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. "
           + "Written for diagnosis rather than for an application: the point is to see the stores "
@@ -110,14 +110,14 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getTemplateElementInfo(
-      @Parameter(description = "Identifier of the template element to report on.", required = true)
-      @QueryParam(PP_ID) String id) throws CedarException {
+      @Parameter(description = "Identifier of the template element to report on, percent-encoded as one path segment.", required = true)
+      @PathParam(PP_ID) String id) throws CedarException {
     return artifactInfo(id, org.metadatacenter.model.CedarResourceType.ELEMENT);
   }
 
   @GET
   @Timed
-  @Path("/template-fields")
+  @Path("/template-fields/{" + PP_ID + "}")
   @Operation(summary = "Get everything CEDAR knows about a template field",
       description = "Gather what each store holds about one template field into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. "
           + "Written for diagnosis rather than for an application: the point is to see the stores "
@@ -134,14 +134,14 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getTemplateFieldInfo(
-      @Parameter(description = "Identifier of the template field to report on.", required = true)
-      @QueryParam(PP_ID) String id) throws CedarException {
+      @Parameter(description = "Identifier of the template field to report on, percent-encoded as one path segment.", required = true)
+      @PathParam(PP_ID) String id) throws CedarException {
     return artifactInfo(id, org.metadatacenter.model.CedarResourceType.FIELD);
   }
 
   @GET
   @Timed
-  @Path("/template-instances")
+  @Path("/template-instances/{" + PP_ID + "}")
   @Operation(summary = "Get everything CEDAR knows about a template instance",
       description = "Gather what each store holds about one template instance into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. "
           + "Written for diagnosis rather than for an application: the point is to see the stores "
@@ -158,8 +158,8 @@ public class ResourceInfoArtifact extends AbstractMonitorResource {
       @ApiResponse(responseCode = "500", content = @Content(schema = @Schema(implementation = CedarError.class)), description = "Internal server error")
   })
   public Response getTemplateInstanceInfo(
-      @Parameter(description = "Identifier of the template instance to report on.", required = true)
-      @QueryParam(PP_ID) String id) throws CedarException {
+      @Parameter(description = "Identifier of the template instance to report on, percent-encoded as one path segment.", required = true)
+      @PathParam(PP_ID) String id) throws CedarException {
     return artifactInfo(id, org.metadatacenter.model.CedarResourceType.INSTANCE);
   }
 

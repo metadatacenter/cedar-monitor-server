@@ -145,7 +145,7 @@ public class StoreOutageMatrixTest {
   private record Diagnostic(String route, String section, String value) {
     @Override
     public String toString() {
-      return "/resource/" + route;
+      return "/resources/" + route + "/{id}";
     }
   }
 
@@ -171,7 +171,7 @@ public class StoreOutageMatrixTest {
   @ParameterizedTest(name = "{0}, with OpenSearch {1}")
   @MethodSource("diagnostics")
   public void aDiagnosticSaysWhenAStoreCouldNotBeRead(Diagnostic diagnostic, Index index) throws Exception {
-    HttpResponse<String> response = get("/resource/" + diagnostic.route() + "?id="
+    HttpResponse<String> response = get("/resources/" + diagnostic.route() + "/"
         + URLEncoder.encode(SUBJECTS.get(diagnostic.route()), StandardCharsets.UTF_8), index);
 
     Assertions.assertEquals(200, response.statusCode(), response.body());

@@ -25,67 +25,6 @@
         "tags" : [ "Service" ]
       }
     },
-    "/command/resource-id-lookup" : {
-      "get" : {
-        "description" : "Take anything that might name a CEDAR artifact — an identifier, an IRI, a URL from the workbench, a path with a query string — and report the artifact identifier it resolves to, and how that was arrived at. Written for reading a support ticket or a log line, where what arrives is whatever a user pasted. Always answers 200: a string that resolves to nothing is a finding, not a failed request, and the body says so.",
-        "operationId" : "lookUpResource",
-        "parameters" : [ {
-          "description" : "The string to resolve. Leading and trailing space is trimmed; the sanitized form is echoed in the response.",
-          "in" : "query",
-          "name" : "input",
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ResourceIdLookup"
-                }
-              }
-            },
-            "description" : "What the input resolved to, and how"
-          },
-          "401" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Unauthorized"
-          },
-          "403" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The caller lacks the monitor read permission"
-          },
-          "500" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Internal server error"
-          }
-        },
-        "security" : [ {
-          "api_key" : [ ]
-        } ],
-        "summary" : "Work out which artifact a string refers to",
-        "tags" : [ "Diagnostics" ]
-      }
-    },
     "/environment-model/declarations" : {
       "get" : {
         "description" : "The static declaration table for the frontends, the admin and caDSR tools, the Keycloak event listener and the shell utilities. Names only — these components are builds and scripts, not processes that can be asked what they resolved.",
@@ -172,7 +111,59 @@
         "tags" : [ "Environment model" ]
       }
     },
-    "/health-check/{server}" : {
+    "/healthcheck" : {
+      "get" : {
+        "operationId" : "healthCheck_1",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Every health check passed"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Forbidden"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "At least one health check failed"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Run this service's health checks",
+        "tags" : [ "Service diagnostics" ]
+      }
+    },
+    "/healthcheck/{server}" : {
       "get" : {
         "description" : "Proxy the named server's health check. The status and body are the other server's own, so a 500 here can mean that server is unhealthy rather than that this one failed.",
         "operationId" : "healthCheck",
@@ -235,58 +226,6 @@
         } ],
         "summary" : "Get another server's health check",
         "tags" : [ "Health checks" ]
-      }
-    },
-    "/healthcheck" : {
-      "get" : {
-        "operationId" : "healthCheck_1",
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
-            "description" : "Every health check passed"
-          },
-          "401" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Unauthorized"
-          },
-          "403" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Forbidden"
-          },
-          "500" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
-            "description" : "At least one health check failed"
-          }
-        },
-        "security" : [ {
-          "api_key" : [ ]
-        } ],
-        "summary" : "Run this service's health checks",
-        "tags" : [ "Service diagnostics" ]
       }
     },
     "/host/disk" : {
@@ -1950,510 +1889,6 @@
         "tags" : [ "Queues" ]
       }
     },
-    "/resource/folders" : {
-      "get" : {
-        "description" : "Gather what each store holds about one folder into a single answer: the workspace graph's record of it and its path, its computed permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a folder that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
-        "operationId" : "getFolderInfo",
-        "parameters" : [ {
-          "description" : "Identifier of the folder to report on.",
-          "in" : "query",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/FolderDiagnosticReport"
-                }
-              }
-            },
-            "description" : "What each store holds about the folder"
-          },
-          "401" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Unauthorized"
-          },
-          "403" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The caller lacks the monitor read permission"
-          },
-          "500" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Internal server error"
-          },
-          "503" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The graph, which holds the subject itself, could not be read"
-          }
-        },
-        "security" : [ {
-          "api_key" : [ ]
-        } ],
-        "summary" : "Get everything CEDAR knows about a folder",
-        "tags" : [ "Diagnostics" ]
-      }
-    },
-    "/resource/groups" : {
-      "get" : {
-        "description" : "Gather what each store holds about one group into a single answer: the workspace graph's record of it and its members. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a group that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
-        "operationId" : "getGroupInfo",
-        "parameters" : [ {
-          "description" : "Identifier of the group to report on.",
-          "in" : "query",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/GroupDiagnosticReport"
-                }
-              }
-            },
-            "description" : "What each store holds about the group"
-          },
-          "401" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Unauthorized"
-          },
-          "403" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The caller lacks the monitor read permission"
-          },
-          "500" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Internal server error"
-          },
-          "503" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The graph, which holds the subject itself, could not be read"
-          }
-        },
-        "security" : [ {
-          "api_key" : [ ]
-        } ],
-        "summary" : "Get everything CEDAR knows about a group",
-        "tags" : [ "Diagnostics" ]
-      }
-    },
-    "/resource/template-elements" : {
-      "get" : {
-        "description" : "Gather what each store holds about one template element into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template element that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
-        "operationId" : "getTemplateElementInfo",
-        "parameters" : [ {
-          "description" : "Identifier of the template element to report on.",
-          "in" : "query",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ArtifactDiagnosticReport"
-                }
-              }
-            },
-            "description" : "What each store holds about the template element"
-          },
-          "401" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Unauthorized"
-          },
-          "403" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The caller lacks the monitor read permission"
-          },
-          "500" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Internal server error"
-          },
-          "503" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The graph, which holds the subject itself, could not be read"
-          }
-        },
-        "security" : [ {
-          "api_key" : [ ]
-        } ],
-        "summary" : "Get everything CEDAR knows about a template element",
-        "tags" : [ "Diagnostics" ]
-      }
-    },
-    "/resource/template-fields" : {
-      "get" : {
-        "description" : "Gather what each store holds about one template field into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template field that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
-        "operationId" : "getTemplateFieldInfo",
-        "parameters" : [ {
-          "description" : "Identifier of the template field to report on.",
-          "in" : "query",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ArtifactDiagnosticReport"
-                }
-              }
-            },
-            "description" : "What each store holds about the template field"
-          },
-          "401" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Unauthorized"
-          },
-          "403" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The caller lacks the monitor read permission"
-          },
-          "500" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Internal server error"
-          },
-          "503" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The graph, which holds the subject itself, could not be read"
-          }
-        },
-        "security" : [ {
-          "api_key" : [ ]
-        } ],
-        "summary" : "Get everything CEDAR knows about a template field",
-        "tags" : [ "Diagnostics" ]
-      }
-    },
-    "/resource/template-instances" : {
-      "get" : {
-        "description" : "Gather what each store holds about one template instance into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template instance that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
-        "operationId" : "getTemplateInstanceInfo",
-        "parameters" : [ {
-          "description" : "Identifier of the template instance to report on.",
-          "in" : "query",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ArtifactDiagnosticReport"
-                }
-              }
-            },
-            "description" : "What each store holds about the template instance"
-          },
-          "401" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Unauthorized"
-          },
-          "403" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The caller lacks the monitor read permission"
-          },
-          "500" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Internal server error"
-          },
-          "503" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The graph, which holds the subject itself, could not be read"
-          }
-        },
-        "security" : [ {
-          "api_key" : [ ]
-        } ],
-        "summary" : "Get everything CEDAR knows about a template instance",
-        "tags" : [ "Diagnostics" ]
-      }
-    },
-    "/resource/templates" : {
-      "get" : {
-        "description" : "Gather what each store holds about one template into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
-        "operationId" : "getTemplateInfo",
-        "parameters" : [ {
-          "description" : "Identifier of the template to report on.",
-          "in" : "query",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ArtifactDiagnosticReport"
-                }
-              }
-            },
-            "description" : "What each store holds about the template"
-          },
-          "401" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Unauthorized"
-          },
-          "403" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The caller lacks the monitor read permission"
-          },
-          "500" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Internal server error"
-          },
-          "503" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The graph, which holds the subject itself, could not be read"
-          }
-        },
-        "security" : [ {
-          "api_key" : [ ]
-        } ],
-        "summary" : "Get everything CEDAR knows about a template",
-        "tags" : [ "Diagnostics" ]
-      }
-    },
-    "/resource/users" : {
-      "get" : {
-        "description" : "Gather what each store holds about one user into a single answer: the workspace graph's record of it, the counts it can reach in each store, its group memberships, and the Keycloak account behind it. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a user that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
-        "operationId" : "getUserInfo",
-        "parameters" : [ {
-          "description" : "Identifier of the user to report on.",
-          "in" : "query",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/UserDiagnosticReport"
-                }
-              }
-            },
-            "description" : "What each store holds about the user"
-          },
-          "401" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Unauthorized"
-          },
-          "403" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The caller lacks the monitor read permission"
-          },
-          "500" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "Internal server error"
-          },
-          "503" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CedarError"
-                }
-              }
-            },
-            "description" : "The graph, which holds the subject itself, could not be read"
-          }
-        },
-        "security" : [ {
-          "api_key" : [ ]
-        } ],
-        "summary" : "Get everything CEDAR knows about a user",
-        "tags" : [ "Diagnostics" ]
-      }
-    },
     "/resources/counts" : {
       "get" : {
         "description" : "Report graph, document-store, search-index and Keycloak totals, and the drift report that says which of the differences between them are expected. Document counts are obtained through resource and artifact; a failed count does not become zero.",
@@ -2578,6 +2013,571 @@
         } ],
         "summary" : "Count what the search index holds",
         "tags" : [ "Counts" ]
+      }
+    },
+    "/resources/folders/{id}" : {
+      "get" : {
+        "description" : "Gather what each store holds about one folder into a single answer: the workspace graph's record of it and its path, its computed permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a folder that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
+        "operationId" : "getFolderInfo",
+        "parameters" : [ {
+          "description" : "Identifier of the folder to report on, percent-encoded as one path segment.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FolderDiagnosticReport"
+                }
+              }
+            },
+            "description" : "What each store holds about the folder"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Get everything CEDAR knows about a folder",
+        "tags" : [ "Diagnostics" ]
+      }
+    },
+    "/resources/groups/{id}" : {
+      "get" : {
+        "description" : "Gather what each store holds about one group into a single answer: the workspace graph's record of it and its members. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a group that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
+        "operationId" : "getGroupInfo",
+        "parameters" : [ {
+          "description" : "Identifier of the group to report on, percent-encoded as one path segment.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GroupDiagnosticReport"
+                }
+              }
+            },
+            "description" : "What each store holds about the group"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Get everything CEDAR knows about a group",
+        "tags" : [ "Diagnostics" ]
+      }
+    },
+    "/resources/lookup" : {
+      "get" : {
+        "description" : "Take anything that might name a CEDAR artifact — an identifier, an IRI, a URL from the workbench, a path with a query string — and report the artifact identifier it resolves to, and how that was arrived at. Written for reading a support ticket or a log line, where what arrives is whatever a user pasted. Always answers 200: a string that resolves to nothing is a finding, not a failed request, and the body says so.",
+        "operationId" : "lookUpResource",
+        "parameters" : [ {
+          "description" : "The string to resolve. Leading and trailing space is trimmed; the sanitized form is echoed in the response.",
+          "in" : "query",
+          "name" : "input",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResourceIdLookup"
+                }
+              }
+            },
+            "description" : "What the input resolved to, and how"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Work out which artifact a string refers to",
+        "tags" : [ "Diagnostics" ]
+      }
+    },
+    "/resources/template-elements/{id}" : {
+      "get" : {
+        "description" : "Gather what each store holds about one template element into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template element that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
+        "operationId" : "getTemplateElementInfo",
+        "parameters" : [ {
+          "description" : "Identifier of the template element to report on, percent-encoded as one path segment.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactDiagnosticReport"
+                }
+              }
+            },
+            "description" : "What each store holds about the template element"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Get everything CEDAR knows about a template element",
+        "tags" : [ "Diagnostics" ]
+      }
+    },
+    "/resources/template-fields/{id}" : {
+      "get" : {
+        "description" : "Gather what each store holds about one template field into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template field that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
+        "operationId" : "getTemplateFieldInfo",
+        "parameters" : [ {
+          "description" : "Identifier of the template field to report on, percent-encoded as one path segment.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactDiagnosticReport"
+                }
+              }
+            },
+            "description" : "What each store holds about the template field"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Get everything CEDAR knows about a template field",
+        "tags" : [ "Diagnostics" ]
+      }
+    },
+    "/resources/template-instances/{id}" : {
+      "get" : {
+        "description" : "Gather what each store holds about one template instance into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template instance that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
+        "operationId" : "getTemplateInstanceInfo",
+        "parameters" : [ {
+          "description" : "Identifier of the template instance to report on, percent-encoded as one path segment.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactDiagnosticReport"
+                }
+              }
+            },
+            "description" : "What each store holds about the template instance"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Get everything CEDAR knows about a template instance",
+        "tags" : [ "Diagnostics" ]
+      }
+    },
+    "/resources/templates/{id}" : {
+      "get" : {
+        "description" : "Gather what each store holds about one template into a single answer: the workspace graph's record of it and its path, the computed report and permissions, and the OpenSearch document. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a template that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
+        "operationId" : "getTemplateInfo",
+        "parameters" : [ {
+          "description" : "Identifier of the template to report on, percent-encoded as one path segment.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactDiagnosticReport"
+                }
+              }
+            },
+            "description" : "What each store holds about the template"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Get everything CEDAR knows about a template",
+        "tags" : [ "Diagnostics" ]
+      }
+    },
+    "/resources/users/{id}" : {
+      "get" : {
+        "description" : "Gather what each store holds about one user into a single answer: the workspace graph's record of it, the counts it can reach in each store, its group memberships, and the Keycloak account behind it. Written for diagnosis rather than for an application: the point is to see the stores side by side, since a user that behaves oddly usually has one store disagreeing with another. OpenSearch or Keycloak failing to answer leaves its value null and says why under the section's `unavailable`, rather than failing the request. The graph holds the subject itself, so without it the answer is a 503. An identifier nothing knows returns an empty answer with 200.",
+        "operationId" : "getUserInfo",
+        "parameters" : [ {
+          "description" : "Identifier of the user to report on, percent-encoded as one path segment.",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserDiagnosticReport"
+                }
+              }
+            },
+            "description" : "What each store holds about the user"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The caller lacks the monitor read permission"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          },
+          "503" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CedarError"
+                }
+              }
+            },
+            "description" : "The graph, which holds the subject itself, could not be read"
+          }
+        },
+        "security" : [ {
+          "api_key" : [ ]
+        } ],
+        "summary" : "Get everything CEDAR knows about a user",
+        "tags" : [ "Diagnostics" ]
       }
     },
     "/search-index/job-status" : {
